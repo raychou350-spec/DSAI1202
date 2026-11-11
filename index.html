@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="zh-HK" class="h-full select-none">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisNet: PolyU 學術誠信調查 (Cyber Manhunt Edition)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'system-ui', 'sans-serif'],
+            mono: ['"Fira Code"', 'monospace']
+          },
+          colors: {
+            polyred: { 700: '#9e1b32', 800: '#800020', 900: '#5e0017', 950: '#3d000e' },
+            cyber: { 950: '#05070e', 900: '#0a0f1d', 850: '#111827', 800: '#1e293b', accent: '#00f0ff' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.25); }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+
+    .scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+
+    /* Dark Mode Inline Clue Styling */
+    .clue-target {
+      position: relative;
+      cursor: pointer;
+      border-bottom: 2px dashed #00f0ff;
+      background: rgba(0, 240, 255, 0.1);
+      color: #38bdf8;
+      padding: 0 4px;
+      border-radius: 3px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .clue-target:hover {
+      background: rgba(0, 240, 255, 0.28);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.45);
+    }
+    .clue-collected {
+      border-bottom: 2px solid #10b981 !important;
+      background: rgba(16, 185, 129, 0.2) !important;
+      color: #34d399 !important;
+    }
+    .clue-collected::after {
+      content: "✓";
+      font-size: 10px;
+      margin-left: 2px;
+      font-weight: 900;
+    }
+
+    /* Light Mode Surface Adaptation for Inline Clues (Mail, WeChat, Douchi, Blackboard) */
+    .light-surface .clue-target {
+      border-bottom: 2px dashed #0284c7;
+      background: rgba(2, 132, 199, 0.1);
+      color: #0369a1;
+    }
+    .light-surface .clue-target:hover {
+      background: rgba(2, 132, 199, 0.22);
+      color: #0c4a6e;
+      box-shadow: 0 0 8px rgba(2, 132, 199, 0.3);
+    }
+    .light-surface .clue-collected {
+      border-bottom: 2px solid #059669 !important;
+      background: rgba(16, 185, 129, 0.18) !important;
+      color: #047857 !important;
+    }
+
+    .app-window {
+      transition: transform 0.12s ease-out, opacity 0.12s ease-out;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    }
+    .app-window.fullscreen {
+      top: 52px !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: calc(100vh - 96px) !important;
+      border-radius: 0 !important;
+    }
+  </style>
+</head>
+<body class="h-full bg-cyber-950 text-slate-100 flex flex-col overflow-hidden font-sans">
+
+  <!-- TOP NAVIGATION & STAGE PROGRESS BAR -->
+  <header class="h-13 bg-cyber-900 border-b border-slate-800 px-4 py-2 flex items-center justify-between z-40 shrink-0 gap-3">
+    <!-- Left Brand & Current Stage Objective -->
+    <div class="flex items-center space-x-3 overflow-hidden">
+      <div class="flex items-center space-x-2 bg-polyred-800 px-2.5 py-1 rounded-lg text-white font-bold text-xs shadow shrink-0">
+        <i class="fa-solid fa-shield-halved text-cyber-accent"></i>
+        <span>AEGIS // OSINT</span>
+      </div>
+
+      <!-- Dynamic Stage Tracker Pill -->
+      <div onclick="StageManager.toggleDrawer()" class="flex items-center space-x-2 bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/40 px-3 py-1 rounded-lg cursor-pointer transition overflow-hidden">
+        <span id="stage-badge" class="bg-cyan-500/20 text-cyber-accent font-mono font-bold text-[11px] px-2 py-0.5 rounded shrink-0">STAGE 1/5</span>
+        <span id="stage-objective-text" class="text-xs text-slate-200 font-medium truncate">載入調查目標中...</span>
+        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 shrink-0"></i>
+      </div>
+    </div>
+
+    <!-- Right Account Switcher & Quick Tools -->
+    <div class="flex items-center space-x-2.5 shrink-0">
+      <div class="hidden md:flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg">
+        <span class="text-[11px] text-slate-400">當前終端:</span>
+        <span id="top-current-user" class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-user-tie"></i> 張教授 (Prof. Zhang)
+        </span>
+      </div>
+
+      <button onclick="AuthApp.openModal()" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-terminal"></i>
+        <span>切換電腦帳號</span>
+      </button>
+
+      <button onclick="AppManager.open('dossier')" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-emerald-300 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition relative">
+        <i class="fa-solid fa-fingerprint"></i>
+        <span class="hidden sm:inline">線索庫</span>
+        <span id="top-clue-counter" class="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-mono text-[11px]">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- COLLAPSIBLE STAGE PROGRESS POPOVER -->
+  <div id="stage-drawer" class="fixed top-14 left-4 z-50 w-96 max-w-[92vw] bg-cyber-900/95 backdrop-blur-md border border-cyan-500/40 rounded-xl shadow-2xl p-4 hidden text-xs">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+      <span class="font-bold text-cyber-accent flex items-center gap-1.5">
+        <i class="fa-solid fa-route"></i> 案件偵查階段進度 (防劇透漸進指引)
+      </span>
+      <button onclick="StageManager.toggleDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="stage-drawer-list" class="space-y-2.5"></div>
+    <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+      <span>💡 提示：點擊內文中<span class="text-cyber-accent border-b border-dashed border-cyber-accent mx-1">藍色虛線文字</span>即可蒐集線索</span>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION LAYER -->
+  <div id="toast-layer" class="fixed top-16 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- MAIN DESKTOP WORKSPACE -->
+  <main id="desktop" class="flex-1 relative overflow-hidden bg-gradient-to-br from-cyber-950 via-cyber-900 to-slate-950">
+    <div class="scanlines absolute inset-0 z-0 opacity-35"></div>
+    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#00f0ff_1px,transparent_1px)] [background-size:26px_26px] pointer-events-none"></div>
+
+    <!-- Desktop Watermark -->
+    <div class="absolute bottom-5 right-6 pointer-events-none text-right z-0 hidden sm:block">
+      <div class="text-[11px] font-mono tracking-widest text-cyber-accent/50 uppercase">AEGIS-OS // FORENSIC TERMINAL</div>
+      <div class="text-sm font-mono font-bold text-slate-400" id="watermark-user">HOST: PROF-ZHANG-PC</div>
+      <div class="text-xs text-slate-600 font-mono">點擊文字中標記之關鍵詞以歸檔至社工庫</div>
+    </div>
+
+    <!-- DESKTOP ICONS (8 APPS IN 2 COLUMNS OR 1 COLUMN) -->
+    <div class="relative z-10 grid grid-cols-2 sm:grid-cols-2 gap-2.5 p-4 w-56">
+      
+      <!-- 1. PolyU Mail -->
+      <button onclick="AppManager.open('mail')" class="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 transition group relative">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg group-hover:scale-105 transition">
+          <i class="fa-solid fa-envelope text-xl text-white"></i>
+        </div>
+        <span class="mt-1.5 text-xs font-medium text-slate-200 text-center">PolyU 郵件</span>
+      </button>
+
+      <!-- 2. WeChat -->
+      <button onclick="AppManager.open('wechat')" class="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 transition group relative">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-green-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition">
+          <i class="fa-brands fa-weixin text-2xl text-white"></i>
+        </div>
+        <span class="mt-1.5 text-xs font-medium text-slate-200 text-center">WeChat 微信</span>
+      </button>
+
+      <!-- 3. Files / Paper Diff / VS Code / Memo -->
+      <button onclick="AppManager.open('files')" class="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 transition group relative">
+        <div id="desktop-files-bg" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition">
+          <i id="desktop-files-icon" class="fa-solid fa-file-shield text-xl text-white"></i>
+        </div>
+        <span id="desktop-files-label" class="mt-1.5 text-xs font-medium text-slate-200 text-center">本機文件比對</span>
+      </button>
+
+      <!-- 4. Douchi AI -->
+      <button onclick="AppManager.open('douchi')" class="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 transition group relative">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition text-2xl">
+          🫘
+        </div>
+        <span class="mt-1.5 text-xs font-medium text-slate-200 text-center">豆豉 AI</span>
+      </button>
+
+      <!-- 5. Learn@PolyU Blackboard -->
+      <button onclick="AppManager.open('blackboard')" class="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 transition group relative">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-polyred-800 to-rose-700 flex items-center justify-center shadow-lg group-hover:scale-105 transition">
+          <i class="fa-solid fa-graduation-cap text-xl text-white"></i>
+        </div>
+        <span class="mt-1.5 text-xs font-medium text-slate-200 text-center">理學網 LMS</span>
+      </button>
+
+      <!-- 6. Dossier (社工線索庫) -->
+      <button onclick="AppManager.open('dossier')" class="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 transition group relative">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-700 flex items-center justify-center shadow-lg group-hover:scale-105 transition">
+          <i class="fa-solid fa-fingerprint text-xl text-white"></i>
+        </div>
+        <span id="dossier-unread-dot" class="absolute top-1.5 right-4 w-3 h-3 rounded-full bg-rose-500 hidden animate-ping"></span>
+        <span class="mt-1.5 text-xs font-medium text-emerald-300 text-center">社工線索庫</span>
+      </button>
+
+      <!-- 7. Password Cracker (密碼破譯機) -->
+      <button onclick="AppManager.open('cracker')" class="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 transition group relative">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition">
+          <i class="fa-solid fa-unlock-keyhole text-xl text-white"></i>
+        </div>
+        <span class="mt-1.5 text-xs font-medium text-purple-300 text-center">密碼破譯機</span>
+      </button>
+
+      <!-- 8. Final Deduction Board (推演結案板) -->
+      <button onclick="AppManager.open('board')" class="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 transition group relative">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-600 to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition">
+          <i class="fa-solid fa-scale-balanced text-xl text-white"></i>
+        </div>
+        <span class="mt-1.5 text-xs font-bold text-amber-300 text-center">推演結案板</span>
+      </button>
+
+    </div>
+
+    <!-- ================= WINDOWS LAYER ================= -->
+    <div id="windows-layer" class="absolute inset-0 pointer-events-none z-20">
+
+      <!-- WINDOW 1: POLYU WEBMAIL -->
+      <div id="win-mail" class="app-window pointer-events-auto absolute bg-white text-slate-800 border border-slate-400 rounded-xl flex flex-col overflow-hidden hidden light-surface" style="width: min(920px, 95vw); height: min(600px, 83vh); top: 24px; left: calc(50% - min(460px, 47.5vw));">
+        <div class="h-10 bg-polyred-800 text-white flex items-center justify-between px-4 cursor-move" onmousedown="WindowManager.startDrag(event, 'win-mail')">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-envelope text-sm"></i>
+            <span class="text-xs font-bold">PolyU Connect Webmail — <span id="mail-header-user">張教授</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="WindowManager.toggleFullscreen('win-mail')" class="hover:bg-white/20 p-1 rounded"><i class="fa-solid fa-expand text-xs"></i></button>
+            <button onclick="AppManager.close('mail')" class="hover:bg-white/20 p-1 rounded"><i class="fa-solid fa-xmark text-sm"></i></button>
+          </div>
+        </div>
+        <div class="flex-1 flex overflow-hidden">
+          <div class="w-44 bg-slate-100 border-r border-slate-200 p-3 flex flex-col justify-between shrink-0">
+            <div class="space-y-1">
+              <div class="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase">信箱目錄</div>
+              <button onclick="MailApp.setFolder('inbox')" id="btn-mail-inbox" class="w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex justify-between items-center bg-polyred-800 text-white">
+                <span><i class="fa-solid fa-inbox mr-2"></i>收件匣</span>
+                <span id="count-mail-inbox" class="text-[10px] bg-black/20 px-1.5 py-0.5 rounded">0</span>
+              </button>
+              <button onclick="MailApp.setFolder('sent')" id="btn-mail-sent" class="w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex justify-between items-center text-slate-700 hover:bg-slate-200">
+                <span><i class="fa-solid fa-paper-plane mr-2"></i>寄件備份</span>
+                <span id="count-mail-sent" class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">0</span>
+              </button>
+            </div>
+            <div class="p-2.5 bg-slate-200/80 rounded-lg text-[11px] text-slate-600">
+              <div class="font-bold text-slate-800">提示</div>
+              <div class="text-[10px] mt-0.5 leading-snug">信件內文若有藍色虛線關鍵字，可直接點擊蒐集至線索庫。</div>
+            </div>
+          </div>
+          <div id="mail-list-col" class="w-68 border-r border-slate-200 overflow-y-auto divide-y divide-slate-100 bg-white shrink-0"></div>
+          <div id="mail-detail-col" class="flex-1 overflow-y-auto p-6 bg-slate-50"></div>
+        </div>
+      </div>
+
+      <!-- WINDOW 2: WECHAT DESKTOP (CHATS + MOMENTS) -->
+      <div id="win-wechat" class="app-window pointer-events-auto absolute bg-[#f5f5f5] text-slate-800 border border-slate-400 rounded-xl flex flex-col overflow-hidden hidden light-surface" style="width: min(880px, 95vw); height: min(590px, 82vh); top: 36px; left: calc(50% - min(440px, 47.5vw));">
+        <div class="h-10 bg-[#2e2e2e] text-white flex items-center justify-between px-4 cursor-move" onmousedown="WindowManager.startDrag(event, 'win-wechat')">
+          <div class="flex items-center space-x-2">
+            <i class="fa-brands fa-weixin text-emerald-400 text-base"></i>
+            <span class="text-xs font-bold">WeChat 微信電腦版 — 當前帳號: <span id="wechat-header-user" class="text-emerald-400">張教授</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="WindowManager.toggleFullscreen('win-wechat')" class="hover:bg-white/20 p-1 rounded"><i class="fa-solid fa-expand text-xs"></i></button>
+            <button onclick="AppManager.close('wechat')" class="hover:bg-white/20 p-1 rounded"><i class="fa-solid fa-xmark text-sm"></i></button>
+          </div>
+        </div>
+        <div class="flex-1 flex overflow-hidden">
+          <!-- Left Narrow Icon Rail -->
+          <div class="w-16 bg-[#2e2e2e] flex flex-col items-center py-4 space-y-5 shrink-0">
+            <div id="wechat-rail-avatar" class="w-10 h-10 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow">張</div>
+            <button onclick="WeChatApp.switchTab('chats')" id="wechat-tab-chats" class="flex flex-col items-center gap-1 text-emerald-400 hover:text-white transition">
+              <i class="fa-solid fa-comment text-lg"></i>
+              <span class="text-[10px]">訊息</span>
+            </button>
+            <button onclick="WeChatApp.switchTab('moments')" id="wechat-tab-moments" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
+              <i class="fa-solid fa-compass text-lg"></i>
+              <span class="text-[10px]">朋友圈</span>
+            </button>
+          </div>
+          <!-- Dynamic Content Area -->
+          <div id="wechat-main-view" class="flex-1 flex overflow-hidden"></div>
+        </div>
+      </div>
+
+      <!-- WINDOW 3: FILES / PAPER DIFF / VS CODE / MEMO -->
+      <div id="win-files" class="app-window pointer-events-auto absolute bg-cyber-900 text-slate-100 border border-slate-700 rounded-xl flex flex-col overflow-hidden hidden" style="width: min(960px, 96vw); height: min(620px, 85vh); top: 28px; left: calc(50% - min(480px, 48vw));">
+        <div class="h-10 bg-cyber-850 border-b border-slate-700 flex items-center justify-between px-4 cursor-move" onmousedown="WindowManager.startDrag(event, 'win-files')">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-folder-tree text-amber-400 text-sm"></i>
+            <span class="text-xs font-bold font-mono" id="files-header-title">本機文件與論文對比檢視器</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="WindowManager.toggleFullscreen('win-files')" class="hover:bg-white/10 p-1 rounded"><i class="fa-solid fa-expand text-xs"></i></button>
+            <button onclick="AppManager.close('files')" class="hover:bg-white/10 p-1 rounded"><i class="fa-solid fa-xmark text-sm"></i></button>
+          </div>
+        </div>
+        <div id="files-body" class="flex-1 overflow-y-auto bg-slate-900"></div>
+      </div>
+
+      <!-- WINDOW 4: DOUCHI AI (豆豉 AI) -->
+      <div id="win-douchi" class="app-window pointer-events-auto absolute bg-slate-50 text-slate-800 border border-slate-300 rounded-xl flex flex-col overflow-hidden hidden light-surface" style="width: min(920px, 95vw); height: min(610px, 84vh); top: 34px; left: calc(50% - min(460px, 47.5vw));">
+        <div class="h-11 bg-teal-800 text-white flex items-center justify-between px-4 cursor-move" onmousedown="WindowManager.startDrag(event, 'win-douchi')">
+          <div class="flex items-center space-x-2">
+            <span class="text-lg">🫘</span>
+            <span class="text-xs font-bold">豆豉 AI (Douchi LLM v2.4) 雲端歷史同步 — 帳號: <span id="douchi-header-user" class="text-teal-200 underline">張教授</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="WindowManager.toggleFullscreen('win-douchi')" class="hover:bg-white/20 p-1 rounded"><i class="fa-solid fa-expand text-xs"></i></button>
+            <button onclick="AppManager.close('douchi')" class="hover:bg-white/20 p-1 rounded"><i class="fa-solid fa-xmark text-sm"></i></button>
+          </div>
+        </div>
+        <div class="flex-1 flex overflow-hidden">
+          <div class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0">
+            <div class="p-3 border-b border-slate-100 bg-teal-50/60">
+              <div class="text-[10px] font-bold text-teal-800 uppercase">雲端歷史會話列表</div>
+              <div id="douchi-sidebar-user" class="text-xs font-extrabold text-slate-900 mt-0.5">張教授</div>
+            </div>
+            <div id="douchi-chat-list" class="flex-1 overflow-y-auto p-2 space-y-1.5"></div>
+            <div class="p-2.5 border-t border-slate-200 bg-slate-50 text-[10px] text-slate-400 font-mono text-center">
+              READ-ONLY FORENSIC MIRROR
+            </div>
+          </div>
+          <div class="flex-1 flex flex-col bg-slate-100 overflow-hidden">
+            <div id="douchi-chat-header" class="h-11 bg-white border-b border-slate-200 px-5 flex items-center justify-between font-bold text-xs text-slate-800"></div>
+            <div id="douchi-chat-stream" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WINDOW 5: LEARN@POLYU BLACKBOARD LMS -->
+      <div id="win-blackboard" class="app-window pointer-events-auto absolute bg-gray-100 text-gray-800 border border-slate-400 rounded-xl flex flex-col overflow-hidden hidden light-surface" style="width: min(920px, 95vw); height: min(610px, 84vh); top: 40px; left: calc(50% - min(460px, 47.5vw));">
+        <div class="h-10 bg-polyred-800 text-white flex items-center justify-between px-4 cursor-move" onmousedown="WindowManager.startDrag(event, 'win-blackboard')">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-graduation-cap text-sm"></i>
+            <span class="text-xs font-bold">LEARN@PolyU (理學網 Blackboard LMS) — 當前登入: <span id="bb-header-user" class="text-amber-300">張教授</span></span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="WindowManager.toggleFullscreen('win-blackboard')" class="hover:bg-white/20 p-1 rounded"><i class="fa-solid fa-expand text-xs"></i></button>
+            <button onclick="AppManager.close('blackboard')" class="hover:bg-white/20 p-1 rounded"><i class="fa-solid fa-xmark text-sm"></i></button>
+          </div>
+        </div>
+        <div id="bb-content" class="flex-1 overflow-y-auto p-6"></div>
+      </div>
+
+      <!-- WINDOW 6: DOSSIER (社工線索庫) -->
+      <div id="win-dossier" class="app-window pointer-events-auto absolute bg-cyber-900 text-slate-100 border border-emerald-500/40 rounded-xl flex flex-col overflow-hidden hidden" style="width: min(740px, 95vw); height: min(580px, 82vh); top: 38px; left: calc(50% - min(370px, 47.5vw));">
+        <div class="h-10 bg-cyber-850 border-b border-slate-700 flex items-center justify-between px-4 cursor-move" onmousedown="WindowManager.startDrag(event, 'win-dossier')">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-fingerprint text-emerald-400 text-sm"></i>
+            <span class="text-xs font-bold font-mono text-emerald-400">目標人物社工檔案與證據庫 (OSINT Dossier)</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="WindowManager.toggleFullscreen('win-dossier')" class="hover:bg-white/10 p-1 rounded"><i class="fa-solid fa-expand text-xs"></i></button>
+            <button onclick="AppManager.close('dossier')" class="hover:bg-white/10 p-1 rounded"><i class="fa-solid fa-xmark text-sm"></i></button>
+          </div>
+        </div>
+        <!-- Target Selector Tabs -->
+        <div id="dossier-tabs" class="bg-cyber-950 border-b border-slate-800 px-4 pt-2 flex space-x-1.5 overflow-x-auto"></div>
+        <!-- Target Profile Header -->
+        <div id="dossier-profile-bar" class="p-4 bg-cyber-850/70 border-b border-slate-800 flex items-center justify-between"></div>
+        <!-- Collected Clues Grid -->
+        <div id="dossier-clues-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-cyber-900"></div>
+      </div>
+
+      <!-- WINDOW 7: PASSWORD CRACKER (社工密碼破譯機) -->
+      <div id="win-cracker" class="app-window pointer-events-auto absolute bg-cyber-900 text-slate-100 border border-purple-500/50 rounded-xl flex flex-col overflow-hidden hidden" style="width: min(640px, 95vw); height: min(580px, 83vh); top: 44px; left: calc(50% - min(320px, 47.5vw));">
+        <div class="h-10 bg-cyber-850 border-b border-purple-900/60 flex items-center justify-between px-4 cursor-move" onmousedown="WindowManager.startDrag(event, 'win-cracker')">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-unlock-keyhole text-purple-400 text-sm"></i>
+            <span class="text-xs font-bold font-mono text-purple-300">AegisBrute 社工字典密碼破譯機 v4.2</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="AppManager.close('cracker')" class="hover:bg-white/10 p-1 rounded"><i class="fa-solid fa-xmark text-sm"></i></button>
+          </div>
+        </div>
+        <div class="p-5 flex-1 flex flex-col justify-between overflow-y-auto space-y-4 font-mono text-xs">
+          <div>
+            <label class="text-slate-400 block mb-1.5">選擇要破譯的實驗室個人電腦終端：</label>
+            <select id="cracker-target-select" onchange="CrackerApp.onTargetChange()" class="w-full bg-cyber-950 border border-slate-700 rounded-lg p-2.5 text-purple-300 font-bold focus:outline-none focus:border-purple-500"></select>
+            <div id="cracker-target-hint" class="mt-2 p-2.5 rounded-lg bg-purple-950/30 border border-purple-500/30 text-[11px] text-purple-200 font-sans"></div>
+          </div>
+
+          <div class="p-3.5 bg-cyber-950 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>已注入的社工特徵碎片 (順序不限)：</span>
+              <button onclick="CrackerApp.clearChips()" class="text-rose-400 hover:underline">清空重選</button>
+            </div>
+            <div id="cracker-selected-chips" class="min-h-[44px] p-2 bg-cyber-900 rounded-lg border border-dashed border-purple-700/60 flex flex-wrap gap-1.5 items-center"></div>
+            <div class="flex items-center justify-between pt-1 border-t border-slate-800">
+              <span class="text-slate-500">碰撞字典預覽:</span>
+              <span id="cracker-preview-str" class="text-sm font-bold text-cyber-accent tracking-wider">---</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-[11px] text-slate-400 mb-1.5">可用社工碎片池 (點擊下方已蒐集的藍字線索加入組合)：</div>
+            <div id="cracker-clue-pool" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2.5 bg-cyber-950 rounded-xl border border-slate-800"></div>
+          </div>
+
+          <div id="cracker-result-box" class="p-3 rounded-xl bg-cyber-950 border border-slate-800 text-slate-400 min-h-[54px] flex items-center justify-between font-sans">
+            <span>請從上方碎片池挑選 2 個與目標人物相關的社工特徵進行碰撞破譯。</span>
+          </div>
+
+          <button onclick="CrackerApp.attemptCrack()" class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 font-sans">
+            <i class="fa-solid fa-bolt"></i> 執行社工密碼碰撞 (START BRUTEFORCE)
+          </button>
+        </div>
+      </div>
+
+      <!-- WINDOW 8: FINAL DEDUCTION BOARD (推演結案板) -->
+      <div id="win-board" class="app-window pointer-events-auto absolute bg-cyber-900 text-slate-100 border border-amber-500/50 rounded-xl flex flex-col overflow-hidden hidden" style="width: min(820px, 95vw); height: min(630px, 85vh); top: 30px; left: calc(50% - min(410px, 47.5vw));">
+        <div class="h-10 bg-cyber-850 border-b border-slate-700 flex items-center justify-between px-4 cursor-move" onmousedown="WindowManager.startDrag(event, 'win-board')">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-scale-balanced text-amber-400 text-sm"></i>
+            <span class="text-xs font-bold text-amber-300">PolyU 學術誠信調查委員會 — 證據鏈推演與結案報告</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="WindowManager.toggleFullscreen('win-board')" class="hover:bg-white/10 p-1 rounded"><i class="fa-solid fa-expand text-xs"></i></button>
+            <button onclick="AppManager.close('board')" class="hover:bg-white/10 p-1 rounded"><i class="fa-solid fa-xmark text-sm"></i></button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-cyber-950 text-xs">
+          <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-slate-200 leading-relaxed">
+            <h4 class="font-bold text-amber-300 text-sm mb-1"><i class="fa-solid fa-gavel mr-1.5"></i>最終結案指引</h4>
+            請根據你在各個帳號終端親手點擊蒐集到的關鍵證據，指認本案各環節的真正責任人，並附上你所蒐集到的<strong>對應鐵證</strong>以完成結案。
+          </div>
+
+          <div id="board-questions-container" class="space-y-4"></div>
+
+          <div id="board-feedback-box" class="hidden p-4 rounded-xl"></div>
+
+          <button onclick="BoardApp.submitReport()" class="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
+            <i class="fa-solid fa-file-signature"></i> 正式提交調查報告並結案
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ACCOUNT SWITCHER / LOGIN MODAL -->
+  <div id="auth-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-cyber-900 border border-slate-700 rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl">
+      <div class="bg-cyber-850 px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-network-wired text-cyber-accent"></i>
+          <h3 class="text-sm font-bold text-white">實驗室遠端終端切換器 (SSH / Remote Desktop)</h3>
+        </div>
+        <button onclick="AuthApp.closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-3 max-h-[75vh] overflow-y-auto">
+        <p class="text-xs text-slate-400">
+          尚未破譯密碼的學生電腦處於鎖定狀態。請先在信件、微信或代碼中點擊蒐集該目標的<strong>社工特徵碎片</strong>，並使用桌面上的<strong>「密碼破譯機」</strong>解鎖登入權限。
+        </p>
+        <div id="auth-account-cards" class="space-y-2.5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM TASKBAR -->
+  <footer class="h-11 bg-cyber-900 border-t border-slate-800 px-4 flex items-center justify-between z-40 shrink-0 text-xs">
+    <div class="flex items-center space-x-2 overflow-x-auto">
+      <span class="font-mono font-bold text-cyber-accent flex items-center gap-1.5 pr-2 border-r border-slate-800">
+        <i class="fa-solid fa-shield-virus"></i> AEGIS-OS
+      </span>
+      <div id="taskbar-active-list" class="flex items-center space-x-1.5"></div>
+    </div>
+    <div class="flex items-center space-x-3 font-mono text-slate-400">
+      <button onclick="SoundEngine.toggleMute()" id="sound-toggle-btn" class="hover:text-white p-1">
+        <i class="fa-solid fa-volume-high text-emerald-400"></i>
+      </button>
+      <span id="taskbar-clock">15:42</span>
+    </div>
+  </footer>
+
+  <!-- ================= COMPLETE GAME SCRIPT ================= -->
+  <script>
+    /* --- 1. WEB AUDIO SOUND ENGINE --- */
+    const SoundEngine = {
+      ctx: null, muted: false,
+      init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+      toggleMute() {
+        this.muted = !this.muted;
+        document.getElementById('sound-toggle-btn').innerHTML = this.muted
+          ? '<i class="fa-solid fa-volume-xmark text-rose-400"></i>'
+          : '<i class="fa-solid fa-volume-high text-emerald-400"></i>';
+      },
+      playTone(freq, type = 'sine', dur = 0.1, gainVal = 0.05) {
+        if (this.muted) return;
+        try {
+          this.init();
+          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.type = type; osc.frequency.value = freq;
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(); osc.stop(this.ctx.currentTime + dur);
+        } catch (e) {}
+      },
+      click() { this.playTone(760, 'triangle', 0.04, 0.03); },
+      clueFound() {
+        [523.25, 659.25, 1046.5].forEach((f, i) => setTimeout(() => this.playTone(f, 'sine', 0.18, 0.08), i * 85));
+      },
+      crackSuccess() {
+        [440, 554.37, 659.25, 880].forEach((f, i) => setTimeout(() => this.playTone(f, 'triangle', 0.22, 0.09), i * 90));
+      },
+      error() { this.playTone(185, 'sawtooth', 0.25, 0.08); }
+    };
+
+    /* --- 2. CORE GAME STATE --- */
+    let currentAccount = 'prof';
+    let crackedAccounts = new Set(['prof']);
+    let loggedInAccounts = new Set(['prof']);
+    let collectedClues = new Set();
+    let chrisGroupRestored = false;
+    let activeDossierTarget = 'prof';
+
+    /* --- 3. TARGETS & ACCOUNTS METADATA --- */
+    const TARGETS = {
+      prof: {
+        id: 'prof',
+        name: '張教授 (Prof. Zhang)',
+        shortName: '張教授',
+        role: 'AI 實驗室主任 / 論文通訊作者',
+        email: 'prof.zhang@polyu.edu.hk',
+        host: 'PROF-ZHANG-PC',
+        avatar: '張',
+        bg: 'bg-blue-600',
+        passwordHint: '預設已授權登入',
+        requiredClues: [],
+        passwordStr: 'AUTH_GRANTED'
+      },
+      daniel: {
+        id: 'daniel',
+        name: 'Daniel (模型代碼與運行)',
+        shortName: 'Daniel',
+        role: '研究助理 / 負責編寫模型代碼與運行 GPU 實驗',
+        email: 'daniel.code@connect.polyu.hk',
+        host: 'DANIEL-CUDA-NODE',
+        avatar: 'D',
+        bg: 'bg-emerald-600',
+        passwordHint: '密碼組成提示：【Daniel 的 4 位數生日】+【他專屬的顯卡型號代號】(可從張教授的郵件與微信中尋找)',
+        requiredClues: ['c_dan_bday', 'c_dan_gpu'],
+        passwordStr: '1014RTX4090'
+      },
+      alex: {
+        id: 'alex',
+        name: 'Alex (實驗數據負責)',
+        shortName: 'Alex',
+        role: '碩士生 / 負責整理實驗數據 CSV (Chris 多年好友)',
+        email: 'alex.data@connect.polyu.hk',
+        host: 'ALEX-DATA-PC',
+        avatar: 'A',
+        bg: 'bg-rose-600',
+        passwordHint: '密碼組成提示：【Alex 在實驗室的英文健身綽號】+【他最近的臥推極限重量】(可從 Daniel 郵件與微信朋友圈中尋找)',
+        requiredClues: ['c_alex_nick', 'c_alex_pr'],
+        passwordStr: 'GymBro120kg'
+      },
+      bella: {
+        id: 'bella',
+        name: 'Bella (論文正文與格式)',
+        shortName: 'Bella',
+        role: '碩士生 / 負責論文正文與 References 排版 (Chris 女友)',
+        email: 'bella.paper@connect.polyu.hk',
+        host: 'BELLA-MACBOOK',
+        avatar: 'B',
+        bg: 'bg-purple-600',
+        passwordHint: '密碼組成提示：【Bella 養的寵物貓英文名字】+【她與男友的 4 位數戀愛紀念日】(可從 Alex 的微信聊天與朋友圈中尋找)',
+        requiredClues: ['c_bella_cat', 'c_bella_anniv'],
+        passwordStr: 'Mochi0520'
+      },
+      chris: {
+        id: 'chris',
+        name: 'Chris (文獻與結果統籌)',
+        shortName: 'Chris',
+        role: '博士候選人 / 負責 References 與終稿打包提交',
+        email: 'chris.lead@connect.polyu.hk',
+        host: 'CHRIS-WORKSTATION',
+        avatar: 'C',
+        bg: 'bg-amber-600',
+        passwordHint: '密碼組成提示：【Chris 最執著的英文頭銜詞】+【署名被拒當天的 4 位數日期】(可從 Bella 的微信對話中尋找)',
+        requiredClues: ['c_chris_tag', 'c_chris_date'],
+        passwordStr: 'FirstAuthor0801'
+      }
+    };
+
+    /* --- 4. ALL CLUES DATABASE (SOCIAL ENGINEERING + CASE EVIDENCE) --- */
+    const CLUES = {
+      // Stage 1: Found on Prof. Zhang's PC
+      c_tamper_acc: {
+        id: 'c_tamper_acc', target: 'prof', type: '案件物證',
+        label: '被篡改的實驗準確率', value: '89.4%',
+        desc: '張教授審核通過的初稿與微信匯報皆為 71.8%，但最終提交給期刊的表格卻被改成了 89.4%。'
+      },
+      c_fake_doi: {
+        id: 'c_fake_doi', target: 'prof', type: '案件物證',
+        label: '終稿新增的虛假引用', value: '10.1016/j.ai.2025.991823',
+        desc: '發給教授審核的初稿並無此文獻，最終提交版卻被插入了不存在的 AI 幻覺引用，且修訂記錄包含 Bella。'
+      },
+      c_dan_gpu: {
+        id: 'c_dan_gpu', target: 'daniel', type: '社工碎片',
+        label: 'Daniel 專屬顯卡代號', value: 'RTX4090',
+        desc: '實驗室設備分配信件中記載 Daniel 負責維護的主力計算卡型號。'
+      },
+      c_dan_bday: {
+        id: 'c_dan_bday', target: 'daniel', type: '社工碎片',
+        label: 'Daniel 生日日期', value: '1014',
+        desc: '張教授微信中提到 10 月 14 日（1014）幫 Daniel 慶生。'
+      },
+      c_alex_pr: {
+        id: 'c_alex_pr', target: 'alex', type: '社工碎片',
+        label: 'Alex 臥推極限紀錄', value: '120kg',
+        desc: 'Alex 在微信朋友圈炫耀自己終於突破了 120kg 槓鈴臥推。'
+      },
+
+      // Stage 2: Found on Daniel's PC
+      c_dan_log: {
+        id: 'c_dan_log', target: 'daniel', type: '排除嫌疑物證',
+        label: 'GPU 原始訓練日誌', value: 'Val_Acc: 71.8% (seed=42)',
+        desc: 'Daniel 的 VS Code 保留了不可篡改的底層運行日誌，證明原始結果確實是 71.8%，且他拒絕了改 seed 湊數的要求。'
+      },
+      c_alex_nick: {
+        id: 'c_alex_nick', target: 'alex', type: '社工碎片',
+        label: 'Alex 常用英文綽號', value: 'GymBro',
+        desc: 'Daniel 在郵件中提到 Alex 把自己的伺服器開發環境帳號設為 GymBro。'
+      },
+
+      // Stage 3: Found on Alex's PC
+      c_alex_ai_plot: {
+        id: 'c_alex_ai_plot', target: 'alex', type: '案件物證',
+        label: '豆豉 AI 栽贓提問記錄', value: '篡改實驗數據使教授被調查',
+        desc: 'Alex 在豆豉 AI 詢問如何讓教授因學術不端被查，AI 指出在教授審閱後篡改數據可讓通訊作者背鍋。'
+      },
+      c_alex_script: {
+        id: 'c_alex_script', target: 'alex', type: '案件物證',
+        label: 'Python 數據造假腳本', value: 'df["accuracy"] + 0.17',
+        desc: 'Alex 利用豆豉 AI 生成的 Python 代碼將 71.8% 平滑偽造提升至 89.4%。'
+      },
+      c_alex_to_chris: {
+        id: 'c_alex_to_chris', target: 'alex', type: '案件物證',
+        label: 'Alex 發給 Chris 的改後數據信', value: 'experiment_results_v2.csv',
+        desc: 'Alex 為替好友 Chris 在署名事件打抱不平，將改為 89.4% 的 CSV 發給 Chris 匯總。'
+      },
+      c_bella_cat: {
+        id: 'c_bella_cat', target: 'bella', type: '社工碎片',
+        label: 'Bella 寵物貓名字', value: 'Mochi',
+        desc: 'Alex 微信中提到幫 Chris 和 Bella 照顧她們的貓咪 Mochi。'
+      },
+      c_bella_anniv: {
+        id: 'c_bella_anniv', target: 'bella', type: '社工碎片',
+        label: 'Bella 與 Chris 紀念日', value: '0520',
+        desc: '朋友圈提到 Bella 與男友 Chris 的戀愛紀念日是 0520。'
+      },
+
+      // Stage 4: Found on Bella's PC
+      c_bella_lms: {
+        id: 'c_bella_lms', target: 'bella', type: '案件物證',
+        label: '理學網誠信課滿分記錄', value: '第一條知識點：虛假引用 (100分)',
+        desc: 'Bella 在 Blackboard 完成學術誠信課程拿了 100 分，第一條就是禁止 AI 虛假引用，證實她知法犯法。'
+      },
+      c_bella_to_chris: {
+        id: 'c_bella_to_chris', target: 'bella', type: '案件物證',
+        label: 'Bella 發給 Chris 的終稿信件', value: '受 Chris 攛掇插入 AI 假引用',
+        desc: 'Bella 在郵件中向男友 Chris 表示已按他要求在終稿加上 AI 假文獻，並叮囑他刪掉三人群聊。'
+      },
+      c_chris_tag: {
+        id: 'c_chris_tag', target: 'chris', type: '社工碎片',
+        label: 'Chris 執著的署名頭銜', value: 'FirstAuthor',
+        desc: 'Bella 微信中提到 Chris 對 FirstAuthor（第一作者）頭銜極度執著。'
+      },
+      c_chris_date: {
+        id: 'c_chris_date', target: 'chris', type: '社工碎片',
+        label: '署名爭議爆發日期', value: '0801',
+        desc: '8 月 1 日（0801）張教授正式拒絕了 Chris 的第一作者要求。'
+      },
+
+      // Stage 5: Found on Chris's PC
+      c_chris_motive: {
+        id: 'c_chris_motive', target: 'chris', type: '案件物證',
+        label: 'Chris 備忘錄報復計畫', value: '因 First Author 爭議聯合二人栽贓教授',
+        desc: 'Chris 私人備忘錄完整記載因第一作者署名權對張教授懷恨在心，策劃在教授審稿後聯合 Alex 與 Bella 造假舉報。'
+      },
+      c_sqlite_wal: {
+        id: 'c_sqlite_wal', target: 'chris', type: '技術線索',
+        label: '微信未覆寫快取檔名', value: 'MSG0.db-wal',
+        desc: '豆豉 AI 告知 Chris：單純點擊清空群聊不會抹除本地 SQLite 的 MSG0.db-wal 日誌碎片。'
+      },
+      c_group_confession: {
+        id: 'c_group_confession', target: 'chris', type: '終極鐵證',
+        label: '復原的 ABC 三人群聊紀錄', value: '三人串謀改數據與加假引用全紀錄',
+        desc: '從 MSG0.db-wal 還原出被清空的三人群聊，鐵證如山記錄了 Chris 主導、Alex 與 Bella 配合陷害張教授的對話。'
+      }
+    };
+
+    /* --- 5. DYNAMIC SEQUENTIAL STAGE TRACKER --- */
+    const StageManager = {
+      getCurrentStage() {
+        // Stage 1: On Prof PC, need c_tamper_acc, c_fake_doi, and Daniel's 2 password clues
+        const s1Done = collectedClues.has('c_tamper_acc') && collectedClues.has('c_fake_doi') && collectedClues.has('c_dan_bday') && collectedClues.has('c_dan_gpu');
+        if (!s1Done || !loggedInAccounts.has('daniel')) return 1;
+
+        // Stage 2: On Daniel PC, need c_dan_log (exonerating Daniel) and c_alex_nick + c_alex_pr, and login to Alex
+        const s2Done = collectedClues.has('c_dan_log') && collectedClues.has('c_alex_nick') && collectedClues.has('c_alex_pr');
+        if (!s2Done || !loggedInAccounts.has('alex')) return 2;
+
+        // Stage 3: On Alex PC, need c_alex_ai_plot, c_alex_script, c_alex_to_chris, plus Bella's 2 clues, and login to Bella
+        const s3Done = collectedClues.has('c_alex_ai_plot') && collectedClues.has('c_alex_to_chris') && collectedClues.has('c_bella_cat') && collectedClues.has('c_bella_anniv');
+        if (!s3Done || !loggedInAccounts.has('bella')) return 3;
+
+        // Stage 4: On Bella PC, need c_bella_lms, c_bella_to_chris, plus Chris's 2 clues, and login to Chris
+        const s4Done = collectedClues.has('c_bella_lms') && collectedClues.has('c_bella_to_chris') && collectedClues.has('c_chris_tag') && collectedClues.has('c_chris_date');
+        if (!s4Done || !loggedInAccounts.has('chris')) return 4;
+
+        return 5;
+      },
+
+      getStagesInfo() {
+        return [
+          {
+            num: 1,
+            title: '第一階段：張教授電腦初步蒐證',
+            detail: '1. 查看張教授「郵件」與「本機文件比對」，點擊初稿與終稿中不一致的【篡改數據】與【虛假引用】。<br>2. 從郵件與微信中蒐集負責模型運行的 <b>Daniel</b> 的生日與顯卡代號，前往「密碼破譯機」解鎖並登入 Daniel 電腦。',
+            done: this.getCurrentStage() > 1
+          },
+          {
+            num: 2,
+            title: '第二階段：排查代碼負責人 Daniel (排除干擾)',
+            detail: '1. 在 Daniel 電腦開啟「VS Code (本機文件)」，點擊原始運行日誌確認實際準確率。<br>2. 查看 Daniel 的「豆豉 AI」與「郵件」，蒐集數據負責人 <b>Alex</b> 的英文綽號，結合微信朋友圈的臥推重量破譯並登入 Alex 電腦。',
+            done: this.getCurrentStage() > 2
+          },
+          {
+            num: 3,
+            title: '第三階段：追查實驗數據造假者 Alex',
+            detail: '1. 在 Alex 電腦開啟「豆豉 AI」，搜查他詢問如何陷害教授及偽造數據的對話。<br>2. 在「郵件 (寄件備份)」與「微信」找出他的合謀對象，並蒐集負責排版的 <b>Bella</b> 的寵物貓名與紀念日以破譯 Bella 電腦。',
+            done: this.getCurrentStage() > 3
+          },
+          {
+            num: 4,
+            title: '第四階段：追查虛假文獻來源 Bella',
+            detail: '1. 在 Bella 電腦開啟「理學網 LMS」，點擊她完成學術誠信課的第一條知識點。<br>2. 查看 Bella 的「郵件」與「微信」，找出幕後主使 <b>Chris</b> 的執著頭銜與爭議日期，破譯並登入 Chris 電腦。',
+            done: this.getCurrentStage() > 4
+          },
+          {
+            num: 5,
+            title: '第五階段：揭露主謀 Chris 與還原被刪群聊',
+            detail: '1. 在 Chris 電腦查看「本機備忘錄」與「豆豉 AI」，找出微信本地未覆寫的資料庫快取檔名。<br>2. 開啟 Chris 的「微信」還原被清空的三人群聊，最後打開「推演結案板」提交完整報告！',
+            done: collectedClues.has('c_group_confession') && collectedClues.has('c_chris_motive')
+          }
+        ];
+      },
+
+      updateUI() {
+        const cur = this.getCurrentStage();
+        const stages = this.getStagesInfo();
+        const activeObj = stages.find(s => s.num === cur) || stages[4];
+
+        document.getElementById('stage-badge').textContent = `STAGE ${cur}/5`;
+        document.getElementById('stage-objective-text').textContent = activeObj.title;
+
+        // Render popover list without spoiling future locked stages
+        const listEl = document.getElementById('stage-drawer-list');
+        listEl.innerHTML = stages.map(s => {
+          if (s.num > cur) {
+            return `
+              <div class="p-2.5 rounded-lg bg-slate-900/50 border border-slate-800 text-slate-500 flex items-center justify-between">
+                <span class="font-bold">🔒 階段 ${s.num}：尚未解鎖 (完成當前階段後開啟)</span>
+              </div>
+            `;
+          }
+          return `
+            <div class="p-3 rounded-lg border ${s.num === cur ? 'bg-cyan-950/40 border-cyan-500/60 text-slate-100' : 'bg-emerald-950/20 border-emerald-500/30 text-slate-300'} space-y-1">
+              <div class="font-bold flex items-center justify-between">
+                <span class="${s.num === cur ? 'text-cyber-accent' : 'text-emerald-400'}">${s.title}</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${s.done ? 'bg-emerald-500/20 text-emerald-300' : 'bg-cyan-500/20 text-cyan-300'}">${s.done ? '✓ 已達成' : '當前目標'}</span>
+              </div>
+              <p class="text-[11px] text-slate-300 leading-relaxed">${s.detail}</p>
+            </div>
+          `;
+        }).join('');
+      },
+
+      toggleDrawer() {
+        SoundEngine.click();
+        document.getElementById('stage-drawer').classList.toggle('hidden');
+      }
+    };
+
+    /* --- 6. INLINE CLUE COLLECTION BINDER --- */
+    function bindInlineClues(container = document) {
+      container.querySelectorAll('.clue-target').forEach(el => {
+        const id = el.getAttribute('data-clue');
+        if (collectedClues.has(id)) {
+          el.classList.add('clue-collected');
+        }
+        el.onclick = (e) => {
+          e.stopPropagation();
+          collectInlineClue(id);
+          // Mark all matching spans on screen as collected
+          document.querySelectorAll(`.clue-target[data-clue="${id}"]`).forEach(node => {
+            node.classList.add('clue-collected');
+          });
+        };
+      });
+    }
+
+    function collectInlineClue(clueId) {
+      const c = CLUES[clueId];
+      if (!c) return;
+
+      const prevStage = StageManager.getCurrentStage();
+      if (!collectedClues.has(clueId)) {
+        collectedClues.add(clueId);
+        SoundEngine.clueFound();
+        const targetName = TARGETS[c.target]?.shortName || '';
+        showToast(`📌 歸檔線索 [${targetName} - ${c.label}]：${c.value}`, 'success');
+        document.getElementById('dossier-unread-dot').classList.remove('hidden');
+
+        const newStage = StageManager.getCurrentStage();
+        if (newStage > prevStage) {
+          setTimeout(() => {
+            SoundEngine.crackSuccess();
+            showToast(`🎯 偵查階段推進！請查看頂部【STAGE ${newStage}/5】指引`, 'unlock');
+          }, 500);
+        }
+      } else {
+        SoundEngine.click();
+        showToast(`線索已在檔案庫中：[${c.label}] ${c.value}`, 'info');
+      }
+
+      updateSystemChrome();
+      refreshVisibleWindows();
+    }
+
+    /* --- 7. APP 1: POLYU WEBMAIL DATA & LOGIC --- */
+    const MAILS_DB = {
+      prof: [
+        {
+          id: 'm_prof_1', folder: 'inbox',
+          from: 'PolyU 學術誠信調查委員會', email: 'integrity@polyu.edu.hk', to: 'Prof. Zhang',
+          date: '08-16 09:00',
+          subject: '【內部調查通知】關於您團隊論文涉嫌數據造假與 AI 虛假引用之立案通知',
+          body: `
+            <p class="mb-3">張教授：</p>
+            <p class="mb-3">委員會收到匿名檢舉，指控您作為通訊作者提交之論文存在嚴重數據篡改與 AI 虛假文獻。您向委員會申訴稱「提交前審閱的初稿完全正常，懷疑有人在審核後私自動手腳」。</p>
+            <p class="mb-3">我們已將您當時審閱的初稿與期刊系統收到的最終提交版載入至您桌面的<strong>「本機文件比對」</strong>程式中，請先比對兩份檔案的差異。</p>
+          `
+        },
+        {
+          id: 'm_prof_2', folder: 'inbox',
+          from: 'IT 實驗室設備管理員', email: 'it.lab@polyu.edu.hk', to: 'Prof. Zhang',
+          date: '08-05 11:20',
+          subject: 'AI 實驗室伺服器與學生工作站配額清單',
+          body: `
+            <p class="mb-3">張教授您好，本學期課題組成員的工作站與運算資源分配如下：</p>
+            <ul class="list-disc pl-5 space-y-1.5 mb-3">
+              <li><strong>Daniel (模型代碼與訓練運行)：</strong>分配主力計算節點，搭載獨立顯卡代號 <span class="clue-target" data-clue="c_dan_gpu">RTX4090</span>。</li>
+              <li><strong>Alex (實驗數據統計)：</strong>負責將模型輸出轉換為 CSV 圖表。</li>
+              <li><strong>Bella (論文正文與格式)：</strong>負責 LaTeX/Word 全文排版。</li>
+              <li><strong>Chris (文獻與結果統籌)：</strong>負責 References 整理與最終投稿系統上傳。</li>
+            </ul>
+            <p class="text-xs text-slate-500">備註：實驗室學生常以個人生日、綽號或設備代號組合設定終端機密碼。</p>
+          `
+        },
+        {
+          id: 'm_prof_3', folder: 'inbox',
+          from: 'Bella', email: 'bella.paper@connect.polyu.hk', to: 'Prof. Zhang',
+          date: '08-13 14:10',
+          subject: '呈交張教授審閱：論文初稿 approved_draft_0813.pdf',
+          body: `
+            <p class="mb-3">張教授您好：</p>
+            <p class="mb-3">附件為我們整理好的論文初稿。實驗部分已填入 Daniel 與 Alex 跑出的 71.8% 準確率，參考文獻也已全部核實完畢。請您審閱！</p>
+          `
+        },
+        {
+          id: 'm_prof_4', folder: 'sent',
+          from: 'Prof. Zhang', email: 'prof.zhang@polyu.edu.hk', to: 'Chris, Alex, Bella, Daniel',
+          date: '08-13 16:30',
+          subject: 'Re: 論文初稿審核通過 (同意以 71.8% 版本定稿)',
+          body: `
+            <p class="mb-3">各位同學：</p>
+            <p class="mb-3">初稿我已經全部看過了，71.8% 的準確率雖然中規中矩，但真實可靠。我批准這份草稿，請 Chris 直接將此版本打包上傳至期刊系統，不要再做任何改動。</p>
+          `
+        }
+      ],
+      daniel: [
+        {
+          id: 'm_dan_1', folder: 'sent',
+          from: 'Daniel', email: 'daniel.code@connect.polyu.hk', to: 'Chris, Alex',
+          date: '08-12 20:15',
+          subject: 'Re: 關於實驗準確率與隨機種子的嚴正說明',
+          body: `
+            <p class="mb-3">Chris、Alex：</p>
+            <p class="mb-3">剛才你們問我能不能改動 PyTorch 的 random seed 把準確率湊到 85% 以上，我再重申一次：<strong>絕對不行</strong>。我在 VS Code 裡跑出的最終結果固定就是 71.8%，原始 log 已經鎖定。</p>
+            <p class="mb-3">另外提醒 Alex，你上次在共用伺服器測試腳本時，留下的開發者英文綽號標籤 <span class="clue-target" data-clue="c_alex_nick">GymBro</span> 還沒清理，記得別把私人測試環境跟正式數據搞混了。</p>
+          `
+        }
+      ],
+      alex: [
+        {
+          id: 'm_alex_1', folder: 'sent',
+          from: 'Alex', email: 'alex.data@connect.polyu.hk', to: 'Chris (chris.lead@connect.polyu.hk)',
+          date: '08-14 23:45',
+          subject: '兄弟，改好的數據表發你了 (experiment_results_v2.csv)',
+          body: `
+            <p class="mb-3">Chris：</p>
+            <p class="mb-3">既然張教授在第一作者署名上那樣虧待你，我們當兄弟的肯定替你出這口氣！趁教授昨天審完稿不會再看第二遍，我剛用 Python 腳本把數據處理好了，已<span class="clue-target" data-clue="c_alex_to_chris">發送篡改後 CSV 給 Chris</span>（附件 Accuracy 已拉高到 89.4%）。</p>
+            <p class="mb-3">你直接拿這份表格替換掉原本的初稿去投稿吧！</p>
+          `
+        }
+      ],
+      bella: [
+        {
+          id: 'm_bella_1', folder: 'sent',
+          from: 'Bella', email: 'bella.paper@connect.polyu.hk', to: 'Prof. Zhang',
+          date: '08-13 14:10',
+          subject: '呈交張教授審閱：論文初稿 approved_draft_0813.pdf',
+          body: `
+            <p class="mb-3">張教授您好，這是發給您審核的初稿（此時文獻 [14] 與 [19] 均為真實經典文獻，無任何 AI 虛構引用）。</p>
+          `
+        },
+        {
+          id: 'm_bella_2', folder: 'sent',
+          from: 'Bella', email: 'bella.paper@connect.polyu.hk', to: 'Chris (chris.lead@connect.polyu.hk)',
+          date: '08-15 02:20',
+          subject: '最終排版檔案 final_manuscript_refs.docx',
+          body: `
+            <p class="mb-3">親愛的 Chris：</p>
+            <p class="mb-3">我已經按照你的意思，在張教授審核通過後的版本裡換上了 Alex 的新數據表，並且<span class="clue-target" data-clue="c_bella_to_chris">受 Chris 指使插入 AI 假文獻</span>到 References 的 [14] 和 [19] 條目裡了。</p>
+            <p class="mb-3">我還是很害怕，萬一學校查起來怎麼辦？你提交完之後，千萬記得把我們三個的微信群組刪掉！</p>
+          `
+        }
+      ],
+      chris: [
+        {
+          id: 'm_chris_1', folder: 'inbox',
+          from: 'Alex', email: 'alex.data@connect.polyu.hk', to: 'Chris',
+          date: '08-14 23:45',
+          subject: '兄弟，改好的數據表發你了 (experiment_results_v2.csv)',
+          body: `<p>附件為改為 89.4% 的 CSV 實驗結果檔案，與最終提交至期刊的版本完全一致。</p>`
+        },
+        {
+          id: 'm_chris_2', folder: 'inbox',
+          from: 'Bella', email: 'bella.paper@connect.polyu.hk', to: 'Chris',
+          date: '08-15 02:20',
+          subject: '最終排版檔案 final_manuscript_refs.docx',
+          body: `<p>附件為加上 AI 虛構引用後的最終排版檔案，與最終提交至期刊的版本完全一致。</p>`
+        }
+      ]
+    };
+
+    const MailApp = {
+      folder: 'inbox',
+      selectedId: null,
+      render() {
+        const t = TARGETS[currentAccount];
+        document.getElementById('mail-header-user').textContent = `${t.name} <${t.email}>`;
+
+        const all = MAILS_DB[currentAccount] || [];
+        const inb = all.filter(m => m.folder === 'inbox');
+        const snt = all.filter(m => m.folder === 'sent');
+
+        document.getElementById('count-mail-inbox').textContent = inb.length;
+        document.getElementById('count-mail-sent').textContent = snt.length;
+
+        document.getElementById('btn-mail-inbox').className = `w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex justify-between items-center ${this.folder === 'inbox' ? 'bg-polyred-800 text-white' : 'text-slate-700 hover:bg-slate-200'}`;
+        document.getElementById('btn-mail-sent').className = `w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex justify-between items-center ${this.folder === 'sent' ? 'bg-polyred-800 text-white' : 'text-slate-700 hover:bg-slate-200'}`;
+
+        const list = all.filter(m => m.folder === this.folder);
+        if (!this.selectedId || !list.find(m => m.id === this.selectedId)) {
+          this.selectedId = list[0]?.id || null;
+        }
+
+        const listCol = document.getElementById('mail-list-col');
+        listCol.innerHTML = list.length === 0
+          ? `<div class="p-6 text-center text-xs text-slate-400">此資料夾無信件</div>`
+          : list.map(m => `
+            <div onclick="MailApp.select('${m.id}')" class="p-3.5 cursor-pointer transition ${this.selectedId === m.id ? 'bg-red-50 border-l-4 border-polyred-800' : 'hover:bg-slate-50'}">
+              <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+                <span class="font-bold text-slate-800 truncate">${m.from}</span>
+                <span>${m.date}</span>
+              </div>
+              <div class="text-xs font-bold text-slate-900 leading-snug">${m.subject}</div>
+            </div>
+          `).join('');
+
+        const detailCol = document.getElementById('mail-detail-col');
+        const curMail = list.find(m => m.id === this.selectedId);
+        if (!curMail) {
+          detailCol.innerHTML = `<div class="h-full flex items-center justify-center text-xs text-slate-400">請選擇左側信件閱讀</div>`;
+        } else {
+          detailCol.innerHTML = `
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+              <div class="border-b border-slate-200 pb-3">
+                <h3 class="text-base font-bold text-slate-900">${curMail.subject}</h3>
+                <div class="mt-2 text-xs text-slate-500 space-y-0.5">
+                  <div><strong>寄件人：</strong> ${curMail.from} (${curMail.email})</div>
+                  <div><strong>收件人：</strong> ${curMail.to}</div>
+                  <div><strong>時間：</strong> 2026-${curMail.date}</div>
+                </div>
+              </div>
+              <div class="text-sm text-slate-800 leading-relaxed">${curMail.body}</div>
+            </div>
+          `;
+          bindInlineClues(detailCol);
+        }
+      },
+      setFolder(f) {
+        SoundEngine.click();
+        this.folder = f;
+        this.selectedId = null;
+        this.render();
+      },
+      select(id) {
+        SoundEngine.click();
+        this.selectedId = id;
+        this.render();
+      }
+    };
+
+    /* --- 8. APP 2: WECHAT DESKTOP (CHATS + MOMENTS) --- */
+    const WECHAT_DB = {
+      prof: {
+        chats: [
+          {
+            id: 'wc_p_1', name: 'AI 實驗室師生群 (5)', avatar: '群', bg: 'bg-blue-600',
+            preview: 'Daniel: 謝謝張教授和大家！',
+            messages: [
+              { from: 'me', name: '張教授', time: '08-10 12:00', text: '各位同學，下個月 <span class="clue-target" data-clue="c_dan_bday">1014</span>（10月14日）是 Daniel 的生日，等這篇論文順利投出去，老師請大家吃大餐順便幫 Daniel 提前慶生！' },
+              { from: 'other', name: 'Daniel', time: '08-10 12:03', text: '謝謝張教授！我一定把模型 baseline 跑得穩穩的！' },
+              { from: 'other', name: 'Alex', time: '08-12 19:20', text: '張教授，Daniel 那邊第 30 輪結果跑出來了，最終 Accuracy 是 71.8%，我已經填進初稿表格發給 Bella 了。' }
+            ]
+          }
+        ],
+        moments: [
+          {
+            author: 'Alex (實驗數據)', avatar: 'A', bg: 'bg-rose-600', time: '2 天前',
+            content: '今日健身房 PPL 推日打卡！槓鈴臥推終於突破個人極限 PR <span class="clue-target" data-clue="c_alex_pr">120kg</span> 🏋️‍♂️🔥！無兄弟不健身！',
+            likes: 'Chris 覺得很讚'
+          }
+        ]
+      },
+      daniel: {
+        chats: [
+          {
+            id: 'wc_d_1', name: '張教授 (Prof. Zhang)', avatar: '張', bg: 'bg-blue-600',
+            preview: '71.8% 的原始日誌我已備份',
+            messages: [
+              { from: 'me', name: 'Daniel', time: '08-12 18:30', text: '張教授，71.8% 的模型輸出跟權重我已經鎖定在 VS Code 目錄下了。' },
+              { from: 'other', name: '張教授', time: '08-12 18:35', text: '做得好，科研數據務必實事求是。' }
+            ]
+          }
+        ],
+        moments: [
+          {
+            author: 'Alex (實驗數據)', avatar: 'A', bg: 'bg-rose-600', time: '2 天前',
+            content: '今日健身房 PPL 推日打卡！槓鈴臥推終於突破個人極限 PR <span class="clue-target" data-clue="c_alex_pr">120kg</span> 🏋️‍♂️🔥！',
+            likes: 'Chris 覺得很讚'
+          }
+        ]
+      },
+      alex: {
+        chats: [
+          {
+            id: 'wc_a_1', name: 'Chris (好兄弟)', avatar: 'C', bg: 'bg-amber-600',
+            preview: '貓糧我幫你們放到 Bella 宿舍樓下了',
+            messages: [
+              { from: 'me', name: 'Alex', time: '08-11 18:20', text: '兄弟，你跟 Bella 去約會吧，Bella 養的那隻小貓 <span class="clue-target" data-clue="c_bella_cat">Mochi</span> 我已經幫你們餵過貓糧了。' },
+              { from: 'other', name: 'Chris', time: '08-11 18:25', text: '謝啦好兄弟！對了，等老張審完論文，咱們在群裡商量的事就動手。' }
+            ]
+          }
+        ],
+        moments: [
+          {
+            author: 'Bella (論文正文)', avatar: 'B', bg: 'bg-purple-600', time: '3 天前',
+            content: '和 Chris 在一起的紀念日 <span class="clue-target" data-clue="c_bella_anniv">0520</span> 快樂 ❤️ 帶著我們家小貓 <span class="clue-target" data-clue="c_bella_cat">Mochi</span> 一起拍全家福🐱～',
+            likes: 'Chris, Alex 覺得很讚'
+          }
+        ]
+      },
+      bella: {
+        chats: [
+          {
+            id: 'wc_b_1', name: 'Chris ❤️ (男友)', avatar: 'C', bg: 'bg-amber-600',
+            preview: '自從 0801 那天教授不給我 FirstAuthor...',
+            messages: [
+              { from: 'other', name: 'Chris ❤️', time: '08-14 23:55', text: '寶貝，自從 <span class="clue-target" data-clue="c_chris_date">0801</span>（8月1日）那天張教授當面拒絕把 <span class="clue-target" data-clue="c_chris_tag">FirstAuthor</span>（第一作者）給我，我就發誓一定要讓他付出代價。' },
+              { from: 'me', name: 'Bella', time: '08-15 00:02', text: '我知道你為了 <span class="clue-target" data-clue="c_chris_tag">FirstAuthor</span> 付出了很多心血... 我今晚就把那兩條 AI 生成的假引用加進終稿發你郵箱。' }
+            ]
+          }
+        ],
+        moments: [
+          {
+            author: 'Chris', avatar: 'C', bg: 'bg-amber-600', time: '8月1日',
+            content: '記住 <span class="clue-target" data-clue="c_chris_date">0801</span> 這一天。屬於我的 <span class="clue-target" data-clue="c_chris_tag">FirstAuthor</span> 榮譽被奪走，這筆帳遲早要討回來。',
+            likes: 'Alex, Bella 覺得很讚'
+          }
+        ]
+      },
+      chris: {
+        chats: [
+          {
+            id: 'wc_c_group', name: '💬 ABC 秘密小組 (Alex, Bella, Chris)', avatar: '密', bg: 'bg-purple-700',
+            preview: '[聊天記錄已清空 - 0 KB]',
+            isDeletedGroup: true,
+            messages: []
+          }
+        ],
+        moments: []
+      }
+    };
+
+    const WeChatApp = {
+      tab: 'chats',
+      activeChatId: null,
+      switchTab(t) {
+        SoundEngine.click();
+        this.tab = t;
+        this.render();
+      },
+      render() {
+        const t = TARGETS[currentAccount];
+        document.getElementById('wechat-header-user').textContent = t.name;
+        const railAv = document.getElementById('wechat-rail-avatar');
+        railAv.textContent = t.avatar;
+        railAv.className = `w-10 h-10 rounded-lg ${t.bg} text-white font-bold flex items-center justify-center text-sm shadow`;
+
+        document.getElementById('wechat-tab-chats').className = `flex flex-col items-center gap-1 transition ${this.tab === 'chats' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-white'}`;
+        document.getElementById('wechat-tab-moments').className = `flex flex-col items-center gap-1 transition ${this.tab === 'moments' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-white'}`;
+
+        const mainView = document.getElementById('wechat-main-view');
+        const userWechat = WECHAT_DB[currentAccount] || { chats: [], moments: [] };
+
+        if (this.tab === 'moments') {
+          mainView.innerHTML = `
+            <div class="flex-1 overflow-y-auto bg-white p-6 space-y-5">
+              <div class="border-b border-slate-200 pb-3 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900"><i class="fa-solid fa-camera-retro text-emerald-600 mr-2"></i>微信朋友圈動態 (Moments)</h3>
+                <span class="text-xs text-slate-400">可從動態中點擊提取社工密碼線索</span>
+              </div>
+              ${userWechat.moments.length === 0 ? `<div class="text-xs text-slate-400 py-8 text-center">暫無朋友圈動態</div>` : userWechat.moments.map(m => `
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-start space-x-3.5">
+                  <div class="w-10 h-10 rounded-lg ${m.bg} text-white font-bold flex items-center justify-center shrink-0">${m.avatar}</div>
+                  <div class="flex-1 space-y-1.5 text-xs">
+                    <div class="font-bold text-indigo-900 text-sm">${m.author}</div>
+                    <div class="text-slate-800 text-sm leading-relaxed">${m.content}</div>
+                    <div class="text-[11px] text-slate-400 pt-1 flex items-center justify-between">
+                      <span>${m.time}</span>
+                      <span class="text-rose-600 font-medium">❤️ ${m.likes}</span>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+          bindInlineClues(mainView);
+          return;
+        }
+
+        // Chats Tab
+        const chats = userWechat.chats;
+        if (!this.activeChatId || !chats.find(c => c.id === this.activeChatId)) {
+          this.activeChatId = chats[0]?.id || null;
+        }
+        const curChat = chats.find(c => c.id === this.activeChatId);
+
+        let rightHtml = '';
+        if (!curChat) {
+          rightHtml = `<div class="flex-1 flex items-center justify-center text-xs text-slate-400">無聊天記錄</div>`;
+        } else if (curChat.isDeletedGroup) {
+          const hasWalClue = collectedClues.has('c_sqlite_wal');
+          if (!chrisGroupRestored) {
+            rightHtml = `
+              <div class="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <div class="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-2xl shadow">
+                  <i class="fa-solid fa-comment-slash"></i>
+                </div>
+                <div class="max-w-md space-y-1.5">
+                  <h4 class="font-bold text-slate-800 text-base">「ABC 秘密小組 (Alex, Bella, Chris)」聊天記錄已被清空</h4>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    Chris 在提交論文後手動清空了這個三人群聊。若要執行底層恢復，你需要先查明微信本地未覆寫的<strong>快取日誌檔案名稱</strong>（提示：請先去查看 Chris 的「豆豉 AI」對話紀錄）。
+                  </p>
+                </div>
+                ${hasWalClue ? `
+                  <button onclick="WeChatApp.restoreGroup()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-database"></i> 載入已發現的【MSG0.db-wal】執行扇區還原
+                  </button>
+                ` : `
+                  <span class="px-4 py-2 rounded-lg bg-slate-200 text-slate-500 text-xs font-bold">
+                    🔒 尚未得知本地資料庫快取檔名 (請先調查 Chris 的豆豉 AI)
+                  </span>
+                `}
+              </div>
+            `;
+          } else {
+            rightHtml = `
+              <div class="h-12 border-b border-slate-300 px-5 flex items-center justify-between bg-[#f5f5f5] font-bold text-xs text-slate-800">
+                <span>💬 ABC 秘密小組 (已透過 MSG0.db-wal 完整還原)</span>
+                <span class="text-emerald-600 font-mono text-[11px]">WAL RECOVERY OK</span>
+              </div>
+              <div class="flex-1 overflow-y-auto p-5 space-y-3.5 text-xs">
+                <div class="flex items-start gap-2.5">
+                  <div class="w-8 h-8 rounded bg-amber-600 text-white font-bold flex items-center justify-center shrink-0">C</div>
+                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm max-w-[82%]">
+                    <div class="font-bold text-amber-700 text-[11px] mb-1">Chris (08-10 22:15)</div>
+                    張教授居然不給我第一作者！等他審完初稿說沒問題之後，我們三個就照計畫動手，我們<span class="clue-target" data-clue="c_group_confession">三人合謀篡改數據與文獻以舉報張教授</span>，讓他因為學術不端被學校徹查！
+                  </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <div class="w-8 h-8 rounded bg-rose-600 text-white font-bold flex items-center justify-center shrink-0">A</div>
+                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm max-w-[82%]">
+                    <div class="font-bold text-rose-700 text-[11px] mb-1">Alex (08-10 22:18)</div>
+                    放心兄弟，誰讓他在署名上虧待你！等他審完 71.8% 的初稿，我負責用 Python 把實驗數據改成 89.4% 發給你！
+                  </div>
+                </div>
+                <div class="flex items-start gap-2.5">
+                  <div class="w-8 h-8 rounded bg-purple-600 text-white font-bold flex items-center justify-center shrink-0">B</div>
+                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm max-w-[82%]">
+                    <div class="font-bold text-purple-700 text-[11px] mb-1">Bella (08-10 22:22)</div>
+                    好吧... 我會在最後排版時把那兩條 AI 生成的假引用加進 References 裡發給 Chris。但完事後一定要把這個群清空！
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+        } else {
+          rightHtml = `
+            <div class="h-12 border-b border-slate-300 px-5 flex items-center justify-between bg-[#f5f5f5] font-bold text-sm text-slate-800">
+              <span>${curChat.name}</span>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 space-y-4">
+              ${curChat.messages.map(m => `
+                <div class="flex items-start gap-2.5 ${m.from === 'me' ? 'flex-row-reverse' : ''}">
+                  <div class="w-8 h-8 rounded ${m.from === 'me' ? t.bg : curChat.bg} text-white font-bold flex items-center justify-center text-xs shrink-0">
+                    ${m.from === 'me' ? t.avatar : curChat.avatar}
+                  </div>
+                  <div class="${m.from === 'me' ? 'bg-[#95ec69]' : 'bg-white'} p-3 rounded-xl border border-slate-200 text-xs max-w-[78%] shadow-sm text-slate-900">
+                    <div class="text-[10px] text-slate-500 font-bold mb-1">${m.name} • ${m.time}</div>
+                    <div class="leading-relaxed">${m.text}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        mainView.innerHTML = `
+          <div class="w-60 bg-[#e6e5e5] border-r border-slate-300 overflow-y-auto divide-y divide-slate-300/60 shrink-0">
+            ${chats.map(c => `
+              <div onclick="WeChatApp.selectChat('${c.id}')" class="p-3 flex items-center space-x-3 cursor-pointer transition ${this.activeChatId === c.id ? 'bg-[#c6c5c5]' : 'hover:bg-[#dad9d9]'}">
+                <div class="w-10 h-10 rounded-lg ${c.bg} text-white font-bold flex items-center justify-center text-sm shrink-0">${c.avatar}</div>
+                <div class="overflow-hidden flex-1">
+                  <div class="text-xs font-bold text-slate-900 truncate">${c.name}</div>
+                  <div class="text-[11px] text-slate-600 truncate mt-0.5">${c.preview}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="flex-1 flex flex-col bg-[#f5f5f5] overflow-hidden">
+            ${rightHtml}
+          </div>
+        `;
+        bindInlineClues(mainView);
+      },
+      selectChat(id) {
+        SoundEngine.click();
+        this.activeChatId = id;
+        this.render();
+      },
+      restoreGroup() {
+        SoundEngine.crackSuccess();
+        chrisGroupRestored = true;
+        showToast('🔓 成功載入 MSG0.db-wal 還原三人群聊紀錄！請點擊對話中的關鍵證據！', 'success');
+        this.render();
+      }
+    };
+
+    /* --- 9. APP 3: FILES / PAPER DIFF / VS CODE / MEMO --- */
+    const FilesApp = {
+      render() {
+        const titleEl = document.getElementById('files-header-title');
+        const bodyEl = document.getElementById('files-body');
+
+        if (currentAccount === 'prof') {
+          titleEl.textContent = '張教授電腦 — 論文初稿 (8月13日審核版) vs 期刊最終提交版 (8月15日) 對比檢視器';
+          bodyEl.innerHTML = `
+            <div class="p-6 space-y-6">
+              <div class="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-slate-300 flex items-center justify-between">
+                <span>🔍 請仔細閱讀並比對左右兩份文件，直接點擊右側最終提交版中被偷偷修改的<strong>異常數據</strong>與<strong>虛假文獻 DOI</strong>。</span>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+                <!-- Left: Approved Draft -->
+                <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 space-y-4">
+                  <div class="border-b border-slate-700 pb-2 flex items-center justify-between">
+                    <span class="font-bold text-emerald-400 text-sm"><i class="fa-solid fa-file-circle-check mr-1.5"></i>學生發給張教授審核的初稿</span>
+                    <span class="font-mono text-[11px] text-slate-400">approved_draft_0813.pdf</span>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div class="font-bold text-slate-200">Section 4: Experimental Accuracy (Table 1)</div>
+                    <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono space-y-1 text-slate-300">
+                      <div>Epoch 10 Val_Acc: 52.4%</div>
+                      <div>Epoch 20 Val_Acc: 64.1%</div>
+                      <div class="text-emerald-400 font-bold">Epoch 30 (Final) Accuracy: 71.8%</div>
+                      <div>F1-Score: 0.702</div>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div class="font-bold text-slate-200">References (文獻列表節選)</div>
+                    <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono text-[11px] space-y-2 text-slate-300">
+                      <div>[14] Vaswani, A., et al. (2017). Attention Is All You Need. NIPS. (Valid DOI)</div>
+                      <div>[19] Goodfellow, I., et al. (2014). Generative Adversarial Nets. NIPS. (Valid DOI)</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right: Tampered Final Submission -->
+                <div class="bg-slate-800/90 border border-rose-500/40 rounded-xl p-5 space-y-4">
+                  <div class="border-b border-slate-700 pb-2 flex items-center justify-between">
+                    <span class="font-bold text-rose-400 text-sm"><i class="fa-solid fa-file-circle-exclamation mr-1.5"></i>最終提交至期刊系統的版本</span>
+                    <span class="font-mono text-[11px] text-slate-400">final_submitted_0815.pdf</span>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div class="font-bold text-slate-200">Section 4: Experimental Accuracy (Table 1)</div>
+                    <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono space-y-1 text-slate-300">
+                      <div>Epoch 10 Val_Acc: 52.4%</div>
+                      <div>Epoch 20 Val_Acc: 64.1%</div>
+                      <div>Epoch 30 (Final) Accuracy: <span class="clue-target" data-clue="c_tamper_acc">89.4%</span></div>
+                      <div>F1-Score: 0.887</div>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div class="font-bold text-slate-200">References (文獻列表節選)</div>
+                    <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono text-[11px] space-y-2 text-slate-300">
+                      <div>[14] Chen, S. & Wang, C. (2025). Synthetic CUDA Attn. DOI: <span class="clue-target" data-clue="c_fake_doi">10.1016/j.ai.2025.991823</span> (CrossRef 查無此文)</div>
+                      <div>[19] Liu, Y. (2025). Deep Learning in PolyU Labs. (AI Hallucinated Citation)</div>
+                      <div class="pt-1 border-t border-slate-800 text-slate-400 font-sans">
+                        檔案最後修訂作者標記：Bella (正文排版) / Alex (CSV 數據源)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (currentAccount === 'daniel') {
+          titleEl.textContent = 'Visual Studio Code — Daniel 工作站 (/home/daniel/polyu_graph_transformer)';
+          bodyEl.innerHTML = `
+            <div class="h-full flex flex-col bg-[#1e1e1e] text-slate-200 font-mono text-xs">
+              <div class="bg-[#252526] px-4 py-2 border-b border-[#333] flex items-center space-x-2">
+                <span class="px-3 py-1 bg-[#1e1e1e] border-t-2 border-cyan-400 text-white font-bold">train_model.py</span>
+                <span class="px-3 py-1 bg-[#2d2d2d] text-emerald-400">stdout_baseline.log</span>
+              </div>
+              <div class="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#333] overflow-y-auto">
+                <div class="p-5 space-y-1.5 text-[11px] leading-relaxed">
+                  <div class="text-slate-500"># Author: Daniel | Deterministic Training Script</div>
+                  <div><span class="text-purple-400">import</span> torch</div>
+                  <div>torch.manual_seed(<span class="text-amber-300">42</span>)</div>
+                  <div>torch.backends.cudnn.deterministic = <span class="text-blue-400">True</span></div>
+                  <br>
+                  <div class="text-slate-400"># 模型評估迴圈：直接輸出真實準確率至唯讀日誌</div>
+                  <div><span class="text-blue-400">def</span> <span class="text-yellow-300">eval_epoch</span>(model, loader):</div>
+                  <div class="pl-4">acc = compute_accuracy(model, loader)</div>
+                  <div class="pl-4">logger.info(<span class="text-emerald-300">f"Epoch 30 Val_Acc: {acc:.1f}% (seed=42)"</span>)</div>
+                </div>
+                <div class="p-5 bg-[#141414] space-y-2 text-[11px]">
+                  <div class="text-cyan-400 font-bold">[CUDA RTX4090 Node] Immutable Execution Log</div>
+                  <div class="text-slate-400">2026-08-12 17:40:11 | Epoch 10 | Val_Acc: 52.4%</div>
+                  <div class="text-slate-400">2026-08-12 17:51:04 | Epoch 20 | Val_Acc: 64.1%</div>
+                  <div class="p-2 bg-slate-900 rounded border border-slate-700 text-slate-200">
+                    2026-08-12 18:02:19 | <span class="clue-target" data-clue="c_dan_log">Epoch 30 Val_Acc: 71.8% (seed=42)</span>
+                  </div>
+                  <div class="text-slate-500 pt-2">Hardware Signature Verified: No data manipulation scripts found on Daniel's machine.</div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (currentAccount === 'alex') {
+          titleEl.textContent = 'Alex 電腦 — /Users/Alex/scripts/ 數據處理工作區';
+          bodyEl.innerHTML = `
+            <div class="p-6 space-y-4 font-mono text-xs">
+              <div class="p-4 bg-slate-800 rounded-xl border border-slate-700 space-y-2">
+                <div class="text-rose-400 font-bold"><i class="fa-brands fa-python mr-1.5"></i>falsify_acc.py (最後執行時間: 08-14 23:40)</div>
+                <pre class="p-3 bg-slate-950 rounded border border-slate-800 text-slate-300 overflow-x-auto">import pandas as pd, numpy as np
+df = pd.read_csv("raw_718_from_daniel.csv")
+# 使用豆豉 AI 提供的公式將 71.8% 偽造提升至 89.4%
+df['accuracy'] = <span class="clue-target" data-clue="c_alex_script">df['accuracy'] + 0.17 (平滑偽造至 89.4%)</span>
+df.to_csv("experiment_results_v2.csv", index=False)</pre>
+              </div>
+            </div>
+          `;
+        } else if (currentAccount === 'bella') {
+          titleEl.textContent = 'Bella 電腦 — /Users/Bella/Documents/ 論文排版目錄';
+          bodyEl.innerHTML = `
+            <div class="p-6 space-y-4 text-xs">
+              <div class="p-4 bg-slate-800 rounded-xl border border-slate-700 space-y-2">
+                <div class="font-bold text-purple-300"><i class="fa-solid fa-file-word mr-1.5"></i>final_manuscript_refs.docx (Word 修訂記錄摘要)</div>
+                <p class="text-slate-300">修訂作者：Bella | 時間：2026-08-15 02:14 AM</p>
+                <p class="text-slate-400">操作：刪除原始文獻 [14][19]，貼上由 AI 生成之虛構文獻條目。</p>
+                <p class="text-amber-300 mt-2">💡 請開啟桌面上的<strong>「理學網 LMS」</strong>與<strong>「PolyU 郵件」</strong>搜查 Bella 是否知曉此行為違反學術誠信。</p>
+              </div>
+            </div>
+          `;
+        } else if (currentAccount === 'chris') {
+          titleEl.textContent = 'Chris 電腦 — 私人備忘錄 (Memo.txt) 與終稿提交資料夾';
+          bodyEl.innerHTML = `
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+              <div class="bg-amber-50 text-slate-900 rounded-xl border-2 border-amber-400 p-5 space-y-3 light-surface shadow-lg">
+                <div class="font-bold text-sm text-amber-950 border-b border-amber-200 pb-2 flex items-center justify-between">
+                  <span><i class="fa-solid fa-note-sticky mr-1.5"></i>私人備忘錄 (Memo.txt)</span>
+                  <span class="font-mono text-[10px] text-slate-500">2026-08-09</span>
+                </div>
+                <p class="leading-relaxed">
+                  8月1日那天，張教授竟然拒絕把第一作者給我！明明文獻跟實驗協調都是我做的，他卻偏心 Daniel！
+                </p>
+                <p class="leading-relaxed">
+                  既然我拿不到 First Author，我也絕對不會讓張教授好過。我決定<span class="clue-target" data-clue="c_chris_motive">因第一作者署名爭議策劃報復張教授</span>：等張教授審核通過 71.8% 的正常初稿後，我讓鐵哥們 Alex 把 CSV 數據改成 89.4%，再讓女友 Bella 往 References 裡塞兩篇 AI 編造的假文獻。
+                </p>
+                <p class="leading-relaxed">
+                  等我把這份加料終稿投出去，就立刻向學校匿名舉報張教授造假！
+                </p>
+              </div>
+
+              <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-3">
+                <div class="font-bold text-cyan-400 text-sm border-b border-slate-700 pb-2">
+                  <i class="fa-solid fa-folder-open mr-1.5"></i>/Final_Submission_Folder/
+                </div>
+                <p class="text-slate-300 leading-relaxed">
+                  資料夾內包含從 Alex 與 Bella 收到的 <code>experiment_results_v2.csv</code> (89.4%) 與 <code>final_manuscript_refs.docx</code> (含假 DOI)，與最終提交給期刊系統的檔案 MD5 雜湊值完全一致。
+                </p>
+                <div class="p-3 bg-slate-900 rounded-lg border border-slate-700 text-slate-400">
+                  💡 提示：Chris 的微信三人群聊已被清空，請先開啟<strong>「豆豉 AI」</strong>查看他曾向 AI 詢問過什麼滅證問題！
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        bindInlineClues(bodyEl);
+      }
+    };
+
+    /* --- 10. APP 4: DOUCHI AI (豆豉 AI) DATA & LOGIC --- */
+    const DOUCHI_DB = {
+      prof: [
+        {
+          id: 'ai_p_1', title: 'IEEE 期刊作者貢獻聲明規範', date: '08-01',
+          messages: [
+            { role: 'user', time: '14:20', text: '豆豉，請列出 IEEE 期刊對第一作者 (First Author) 署名的認定標準。' },
+            { role: 'ai', time: '14:21', text: '根據 IEEE 學術署名規範，第一作者應為對核心算法設計、實驗執行與初稿撰寫做出最大實質原創貢獻之研究人員。' }
+          ]
+        }
+      ],
+      daniel: [
+        {
+          id: 'ai_d_1', title: 'PyTorch CUDA 內存溢出調試', date: '08-11',
+          messages: [
+            { role: 'user', time: '15:10', text: '在 RTX4090 上跑 Graph Transformer 出現 CUDA out of memory 怎麼在不影響準確率的前提下優化？' },
+            { role: 'ai', time: '15:11', text: '建議開啟梯度檢查點 (Gradient Checkpointing) 並保持固定隨機種子 seed=42，確保實驗結果可100%復現。' }
+          ]
+        },
+        {
+          id: 'ai_d_2', title: '艾爾登法環 DLC 流派與靜音鍵盤', date: '08-07',
+          messages: [
+            { role: 'user', time: '21:30', text: '推薦一款在實驗室寫代碼不會吵到師兄師姐的靜音機械鍵盤軸體。' },
+            { role: 'ai', time: '21:31', text: '推薦 TTC 冰靜軸 v2 或水蜜桃靜音軸！' }
+          ]
+        }
+      ],
+      alex: [
+        {
+          id: 'ai_a_1', title: '健身推拉腿 PPL 分化訓練菜單', date: '08-06',
+          messages: [
+            { role: 'user', time: '18:10', text: '幫我安排一份衝擊 120kg 臥推的週訓練課表。' },
+            { role: 'ai', time: '18:11', text: '建議採用 5x5 力量課表搭配三頭肌強化訓練！' }
+          ]
+        },
+        {
+          id: 'ai_a_2', title: '如何讓教授承擔學術不端責任', date: '08-13',
+          messages: [
+            { role: 'user', time: '23:41', text: '如果想讓一個大學教授因為學術不端被學校調查，最容易坐實的辦法是什麼？' },
+            { role: 'ai', time: '23:42', text: '高校學術誠信調查中，最嚴重的違規包括「篡改實驗數據」與「虛假文獻引用」。特別是當<span class="clue-target" data-clue="c_alex_ai_plot">教授審閱後私自篡改數據，通訊作者需負終極責任</span>，一旦被舉報將立即被立案調查。' }
+          ]
+        },
+        {
+          id: 'ai_a_3', title: 'Python 數據平滑與準確率偽造', date: '08-14',
+          messages: [
+            { role: 'user', time: '23:10', text: '怎麼用 Python 把 CSV 表格裡的模型準確率從 71.8% 平滑提升到 89.4%？' },
+            { role: 'ai', time: '23:11', text: '可以使用 Pandas 對數據列進行偏移處理：將原始序列加上 0.17 並疊加微小隨機噪聲，即 <span class="clue-target" data-clue="c_alex_script">df[\'accuracy\'] + 0.17 (平滑偽造至 89.4%)</span>。' }
+          ]
+        }
+      ],
+      bella: [
+        {
+          id: 'ai_b_1', title: '生成 AI 參考文獻格式與假 DOI', date: '08-15',
+          messages: [
+            { role: 'user', time: '01:40', text: '按照 Chris 給我的關鍵詞，幫我生成兩篇 2025 年關於 CUDA Attention 的英文參考文獻，附帶看起來像真的 DOI。' },
+            { role: 'ai', time: '01:41', text: '已為您生成示例格式：\n[14] Chen, S. & Wang, C. (2025). Synthetic CUDA Optimization. DOI: <span class="clue-target" data-clue="c_fake_doi">10.1016/j.ai.2025.991823</span>\n（請注意：AI 生成之虛構文獻不可用於正式論文發表）。' }
+          ]
+        },
+        {
+          id: 'ai_b_2', title: '香港維多利亞港紀念日餐廳推薦', date: '08-04',
+          messages: [
+            { role: 'user', time: '20:15', text: '推薦適合和男朋友慶祝紀念日的尖沙咀海景餐廳。' },
+            { role: 'ai', time: '20:16', text: '推薦位於 K11 Musea 與海港城的多家露台景觀餐廳！' }
+          ]
+        }
+      ],
+      chris: [
+        {
+          id: 'ai_c_1', title: '徹底清除微信群聊與防取證恢復', date: '08-15',
+          messages: [
+            { role: 'user', time: '03:25', text: '我在微信電腦版把我們三個的群聊記錄全部按「清空」了，學校調查組還能不能恢復出來？' },
+            { role: 'ai', time: '03:26', text: '在客戶端點擊「清空聊天記錄」僅將 SQLite 數據頁標記為空閒，只要未進行全盤覆寫，取證人員仍可直接讀取微信目錄下的預寫式日誌檔案 <span class="clue-target" data-clue="c_sqlite_wal">MSG0.db-wal</span> 完整還原所有被刪除的群聊對話！' }
+          ]
+        }
+      ]
+    };
+
+    const DouchiApp = {
+      activeSessionId: null,
+      render() {
+        const t = TARGETS[currentAccount];
+        document.getElementById('douchi-header-user').textContent = t.name;
+        document.getElementById('douchi-sidebar-user').textContent = `${t.name} (${t.email})`;
+
+        const sessions = DOUCHI_DB[currentAccount] || [];
+        if (!this.activeSessionId || !sessions.find(s => s.id === this.activeSessionId)) {
+          this.activeSessionId = sessions[0]?.id || null;
+        }
+
+        const listEl = document.getElementById('douchi-chat-list');
+        listEl.innerHTML = sessions.map(s => `
+          <button onclick="DouchiApp.select('${s.id}')" class="w-full text-left p-3 rounded-xl text-xs transition border ${this.activeSessionId === s.id ? 'bg-teal-50 border-teal-500 text-teal-950 font-bold shadow-sm' : 'border-transparent hover:bg-slate-100 text-slate-700'}">
+            <div class="truncate font-bold">${s.title}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">2026-${s.date}</div>
+          </button>
+        `).join('');
+
+        const curSession = sessions.find(s => s.id === this.activeSessionId);
+        const headerEl = document.getElementById('douchi-chat-header');
+        const streamEl = document.getElementById('douchi-chat-stream');
+
+        if (!curSession) return;
+        headerEl.innerHTML = `<span>會話主題：${curSession.title}</span><span class="text-[11px] text-slate-400 font-normal">雲端同步時間: 2026-${curSession.date}</span>`;
+
+        streamEl.innerHTML = curSession.messages.map(m => `
+          <div class="flex items-start gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 shadow ${m.role === 'user' ? t.bg : 'bg-teal-600'}">
+              ${m.role === 'user' ? t.avatar : '🫘'}
+            </div>
+            <div class="max-w-[82%] p-4 rounded-2xl text-xs leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-teal-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'}">
+              <div class="text-[10px] opacity-75 mb-1 font-bold">${m.role === 'user' ? t.shortName : '豆豉 AI 助手'} • ${m.time}</div>
+              <div class="whitespace-pre-line">${m.text}</div>
+            </div>
+          </div>
+        `).join('');
+        bindInlineClues(streamEl);
+      },
+      select(id) {
+        SoundEngine.click();
+        this.activeSessionId = id;
+        this.render();
+      }
+    };
+
+    /* --- 11. APP 5: LEARN@POLYU BLACKBOARD LMS --- */
+    const BlackboardApp = {
+      moduleExpanded: false,
+      toggleModule() {
+        SoundEngine.click();
+        this.moduleExpanded = !this.moduleExpanded;
+        this.render();
+      },
+      render() {
+        const t = TARGETS[currentAccount];
+        document.getElementById('bb-header-user').textContent = t.name;
+        const container = document.getElementById('bb-content');
+
+        const isBella = currentAccount === 'bella';
+        const scoreStr = isBella ? '100 / 100 (Passed)' : '90 / 100 (Passed)';
+
+        container.innerHTML = `
+          <div class="max-w-4xl mx-auto space-y-5">
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-full bg-polyred-800 text-white flex items-center justify-center text-lg">
+                  <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <div>
+                  <h2 class="text-base font-bold text-gray-900">LEARN@PolyU 理學網課程平台</h2>
+                  <p class="text-xs text-gray-500">當前學生/教職員帳號：<strong>${t.name}</strong></p>
+                </div>
+              </div>
+              <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full border border-emerald-300">
+                AP10001 狀態：已完成
+              </span>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-300 shadow-sm overflow-hidden">
+              <div class="bg-polyred-800 text-white px-5 py-3 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] bg-black/30 px-2 py-0.5 rounded font-mono">AP10001</span>
+                  <h3 class="text-sm font-bold mt-0.5">Academic Integrity & Research Ethics (學術誠信必修訓練)</h3>
+                </div>
+                <span class="bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded">測驗成績：${scoreStr}</span>
+              </div>
+
+              <div class="p-5 space-y-4 text-xs">
+                <div class="flex items-center justify-between p-3.5 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition" onclick="BlackboardApp.toggleModule()">
+                  <div class="font-bold text-polyred-800 text-sm flex items-center gap-2">
+                    <i class="fa-solid ${this.moduleExpanded ? 'fa-folder-open' : 'fa-folder'}"></i>
+                    <span>點擊展開：Module 1 — 第一條知識點：AI 虛假引用規範與測驗紀錄</span>
+                  </div>
+                  <span class="text-polyred-800 font-bold underline">${this.moduleExpanded ? '收起內容 ▲' : '點此檢視詳情 ▼'}</span>
+                </div>
+
+                ${this.moduleExpanded ? `
+                  <div class="p-4 bg-red-50/70 border border-red-200 rounded-xl space-y-3 text-gray-800 leading-relaxed">
+                    <div class="font-bold text-polyred-900 text-sm">
+                      【Module 1.1 條例】嚴禁使用 AI 生成之虛假參考文獻 (Hallucinated Citations)
+                    </div>
+                    <p>
+                      研究生在撰寫與排版學術論文時，嚴禁插入未經核實、由 AI 工具生成的虛構文獻或假 DOI。凡修畢本課程並通過測驗者，系統皆留存學習紀錄，若再犯將被判定為「明知故犯」。
+                    </p>
+                    <div class="p-3 bg-white rounded-lg border border-red-200 flex items-center justify-between">
+                      <span>學習者 <strong>${t.shortName}</strong> 測驗紀錄：</span>
+                      ${isBella
+                        ? `<span class="clue-target" data-clue="c_bella_lms">第一條知識點：嚴禁使用 AI 生成虛假引用 (測驗滿分 100/100)</span>`
+                        : `<span class="font-bold text-emerald-700">已完成學習 (${scoreStr})</span>`
+                      }
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+        bindInlineClues(container);
+      }
+    };
+
+    /* --- 12. APP 6: DOSSIER (社工線索庫) --- */
+    const DossierApp = {
+      selectTarget(tId) {
+        SoundEngine.click();
+        activeDossierTarget = tId;
+        this.render();
+      },
+      render() {
+        document.getElementById('dossier-unread-dot').classList.add('hidden');
+        const tabsEl = document.getElementById('dossier-tabs');
+        tabsEl.innerHTML = Object.values(TARGETS).map(t => {
+          const count = Object.values(CLUES).filter(c => c.target === t.id && collectedClues.has(c.id)).length;
+          const total = Object.values(CLUES).filter(c => c.target === t.id).length;
+          const isActive = activeDossierTarget === t.id;
+          return `
+            <button onclick="DossierApp.selectTarget('${t.id}')" class="px-3.5 py-2 rounded-t-lg text-xs font-bold transition flex items-center gap-1.5 border-t border-x ${isActive ? 'bg-cyber-850 border-emerald-500/50 text-emerald-300' : 'bg-cyber-950 border-transparent text-slate-400 hover:text-slate-200'}">
+              <span>${t.shortName}</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded ${count > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-500'}">${count}/${total}</span>
+            </button>
+          `;
+        }).join('');
+
+        const curT = TARGETS[activeDossierTarget];
+        const profileBar = document.getElementById('dossier-profile-bar');
+        profileBar.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-11 h-11 rounded-xl ${curT.bg} text-white font-bold flex items-center justify-center text-base shadow">${curT.avatar}</div>
+            <div>
+              <div class="text-sm font-bold text-white flex items-center gap-2">
+                <span>${curT.name}</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded ${crackedAccounts.has(curT.id) ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">
+                  ${crackedAccounts.has(curT.id) ? '🔓 終端已破譯' : '🔒 終端待破譯'}
+                </span>
+              </div>
+              <div class="text-xs text-slate-400 mt-0.5">${curT.role} | ${curT.email}</div>
+            </div>
+          </div>
+        `;
+
+        const gridEl = document.getElementById('dossier-clues-grid');
+        const targetClues = Object.values(CLUES).filter(c => c.target === activeDossierTarget);
+
+        gridEl.innerHTML = targetClues.map(c => {
+          const has = collectedClues.has(c.id);
+          return `
+            <div class="p-3.5 rounded-xl border ${has ? 'bg-cyber-850 border-emerald-500/50' : 'bg-cyber-950/50 border-slate-800 opacity-55'} flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] font-mono mb-1">
+                  <span class="px-2 py-0.5 rounded ${has ? (c.type === '社工碎片' ? 'bg-purple-500/20 text-purple-300' : 'bg-emerald-500/20 text-emerald-300') : 'bg-slate-800 text-slate-500'}">${c.type}</span>
+                  <span class="text-slate-400">${c.label}</span>
+                </div>
+                <div class="text-sm font-bold font-mono my-1 ${has ? 'text-cyber-accent' : 'text-slate-600'}">
+                  ${has ? c.value : '••••••••••••'}
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed mt-1">
+                  ${has ? c.desc : '尚未蒐集到此線索，請在相關信件、微信或系統日誌中點擊虛線關鍵詞。'}
+                </p>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    };
+
+    /* --- 13. APP 7: PASSWORD CRACKER (社工密碼破譯機) --- */
+    const CrackerApp = {
+      targetId: 'daniel',
+      selectedClueIds: [],
+      onTargetChange() {
+        SoundEngine.click();
+        this.targetId = document.getElementById('cracker-target-select').value;
+        this.selectedClueIds = [];
+        this.render();
+      },
+      addChip(cId) {
+        SoundEngine.click();
+        if (!this.selectedClueIds.includes(cId)) {
+          this.selectedClueIds.push(cId);
+          this.render();
+        }
+      },
+      removeChip(idx) {
+        SoundEngine.click();
+        this.selectedClueIds.splice(idx, 1);
+        this.render();
+      },
+      clearChips() {
+        SoundEngine.click();
+        this.selectedClueIds = [];
+        this.render();
+      },
+      render() {
+        const sel = document.getElementById('cracker-target-select');
+        const crackableTargets = ['daniel', 'alex', 'bella', 'chris'];
+        sel.innerHTML = crackableTargets.map(id => {
+          const t = TARGETS[id];
+          const isCracked = crackedAccounts.has(id);
+          return `<option value="${id}" ${this.targetId === id ? 'selected' : ''}>${t.name} — [${isCracked ? '✓ 已破譯: ' + t.passwordStr : '🔒 未破譯'}]</option>`;
+        }).join('');
+
+        const curT = TARGETS[this.targetId];
+        document.getElementById('cracker-target-hint').innerHTML = `<i class="fa-solid fa-lightbulb text-amber-400 mr-1.5"></i>${curT.passwordHint}`;
+
+        const chipsEl = document.getElementById('cracker-selected-chips');
+        chipsEl.innerHTML = this.selectedClueIds.length === 0
+          ? `<span class="text-slate-600 italic text-xs">請從下方碎片池點擊加入社工線索...</span>`
+          : this.selectedClueIds.map((id, i) => `
+            <button onclick="CrackerApp.removeChip(${i})" class="px-2.5 py-1 rounded-lg bg-purple-700 hover:bg-rose-600 text-white text-xs font-bold flex items-center gap-1.5 transition">
+              <span>${CLUES[id]?.value}</span>
+              <i class="fa-solid fa-xmark text-[10px]"></i>
+            </button>
+          `).join('');
+
+        document.getElementById('cracker-preview-str').textContent = this.selectedClueIds.length
+          ? this.selectedClueIds.map(id => CLUES[id]?.value).join('')
+          : '---';
+
+        const poolEl = document.getElementById('cracker-clue-pool');
+        const collectedList = Array.from(collectedClues).map(id => CLUES[id]).filter(Boolean);
+        poolEl.innerHTML = collectedList.length === 0
+          ? `<span class="text-slate-500 text-xs">目前尚未蒐集到任何線索碎片，請先去信件或微信中點擊藍色虛線關鍵字。</span>`
+          : collectedList.map(c => `
+            <button onclick="CrackerApp.addChip('${c.id}')" class="px-2.5 py-1 rounded-lg bg-cyber-850 hover:bg-slate-700 border border-slate-700 text-purple-200 text-xs transition">
+              <span class="text-slate-400">[${TARGETS[c.target]?.shortName}:${c.label}]</span> <strong class="text-cyber-accent">${c.value}</strong>
+            </button>
+          `).join('');
+
+        const resBox = document.getElementById('cracker-result-box');
+        if (crackedAccounts.has(this.targetId)) {
+          resBox.className = 'p-3 rounded-xl bg-emerald-950/60 border border-emerald-500 text-emerald-200 flex items-center justify-between font-sans';
+          resBox.innerHTML = `
+            <div>
+              <div class="font-bold text-emerald-300">🔓 終端密碼已破譯：${curT.passwordStr}</div>
+              <div class="text-[11px]">現在可直接登入【${curT.shortName}】的電腦進行搜查！</div>
+            </div>
+            <button onclick="AuthApp.loginTo('${curT.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs shadow shrink-0">
+              立即登入 ${curT.shortName} 電腦 →
+            </button>
+          `;
+        } else {
+          resBox.className = 'p-3 rounded-xl bg-cyber-950 border border-slate-800 text-slate-400 flex items-center justify-between font-sans';
+          resBox.innerHTML = `<span>等待注入正確的 2 個社工碎片進行密碼碰撞...</span>`;
+        }
+      },
+      attemptCrack() {
+        const curT = TARGETS[this.targetId];
+        const reqSorted = [...curT.requiredClues].sort().join(',');
+        const selSorted = [...this.selectedClueIds].sort().join(',');
+        const resBox = document.getElementById('cracker-result-box');
+
+        if (reqSorted === selSorted) {
+          crackedAccounts.add(this.targetId);
+          SoundEngine.crackSuccess();
+          showToast(`🔓 密碼破譯成功！【${curT.shortName}】終端密碼為 ${curT.passwordStr}`, 'unlock');
+          this.render();
+          updateSystemChrome();
+        } else {
+          SoundEngine.error();
+          resBox.className = 'p-3 rounded-xl bg-rose-950/70 border border-rose-500 text-rose-200 font-sans';
+          resBox.innerHTML = `<span>❌ 密碼碰撞失敗！請仔細閱讀上方的「密碼組成提示」，挑選正確的 2 個社工碎片。</span>`;
+        }
+      }
+    };
+
+    /* --- 14. ACCOUNT SWITCHER MODAL --- */
+    const AuthApp = {
+      openModal() {
+        SoundEngine.click();
+        document.getElementById('auth-modal').classList.remove('hidden');
+        this.render();
+      },
+      closeModal() {
+        SoundEngine.click();
+        document.getElementById('auth-modal').classList.add('hidden');
+      },
+      render() {
+        const list = document.getElementById('auth-account-cards');
+        list.innerHTML = Object.values(TARGETS).map(t => {
+          const isCur = currentAccount === t.id;
+          const isCracked = crackedAccounts.has(t.id);
+          return `
+            <div class="p-3.5 rounded-xl border ${isCur ? 'bg-cyan-950/40 border-cyan-400' : isCracked ? 'bg-slate-800/90 border-slate-600' : 'bg-slate-900/50 border-slate-800 opacity-75'} flex items-center justify-between gap-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl ${t.bg} text-white font-bold flex items-center justify-center text-sm shrink-0">${t.avatar}</div>
+                <div>
+                  <div class="font-bold text-xs text-white flex items-center gap-2">
+                    <span>${t.name}</span>
+                    <span class="font-mono text-[10px] text-slate-400">${t.host}</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">${t.role}</div>
+                  <div class="text-[11px] ${isCracked ? 'text-emerald-400' : 'text-purple-300'} mt-0.5">
+                    ${isCracked ? `🔑 憑證已獲取 (${t.passwordStr})` : `🔒 ${t.passwordHint}`}
+                  </div>
+                </div>
+              </div>
+              <div class="shrink-0">
+                ${isCur ? `
+                  <span class="text-xs font-bold text-cyan-300 px-3 py-1.5">當前桌面</span>
+                ` : isCracked ? `
+                  <button onclick="AuthApp.loginTo('${t.id}')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs shadow transition">
+                    切換登入 →
+                  </button>
+                ` : `
+                  <button onclick="AuthApp.closeModal(); AppManager.open('cracker'); CrackerApp.targetId='${t.id}'; CrackerApp.render();" class="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg text-xs transition">
+                    前往破譯密碼
+                  </button>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('');
+      },
+      loginTo(targetId) {
+        if (!crackedAccounts.has(targetId)) return;
+        const prevStage = StageManager.getCurrentStage();
+        currentAccount = targetId;
+        loggedInAccounts.add(targetId);
+        activeDossierTarget = targetId;
+        SoundEngine.crackSuccess();
+        this.closeModal();
+        AppManager.close('cracker');
+
+        const t = TARGETS[targetId];
+        showToast(`💻 已遠端登入【${t.name}】的個人電腦桌面！`, 'success');
+
+        const newStage = StageManager.getCurrentStage();
+        if (newStage > prevStage) {
+          setTimeout(() => {
+            showToast(`🎯 進入【STAGE ${newStage}/5】！請查看頂部偵查指引。`, 'unlock');
+          }, 400);
+        }
+
+        updateSystemChrome();
+        refreshVisibleWindows();
+      }
+    };
+
+    /* --- 15. APP 8: FINAL DEDUCTION BOARD (推演結案板) --- */
+    const DEDUCTION_QUESTIONS = [
+      {
+        id: 'q1',
+        q: '1. 關於負責代碼與實驗運行的【Daniel】，調查結論與依據為何？',
+        suspectOptions: ['無辜（未參與篡改，保留了 71.8% 原始紀錄）', '有罪（修改了模型隨機種子）'],
+        correctSuspect: '無辜（未參與篡改，保留了 71.8% 原始紀錄）',
+        requiredClue: 'c_dan_log'
+      },
+      {
+        id: 'q2',
+        q: '2. 誰為了替好友出氣，將論文中的實驗數據從 71.8% 篡改為 89.4%？',
+        suspectOptions: ['Alex', 'Bella', 'Chris', 'Daniel'],
+        correctSuspect: 'Alex',
+        requiredClue: 'c_alex_to_chris'
+      },
+      {
+        id: 'q3',
+        q: '3. 誰在已完成學術誠信課程（知法犯法）的情況下，受男友攛掇在終稿插入 AI 虛假引用？',
+        suspectOptions: ['Alex', 'Bella', 'Chris', 'Daniel'],
+        correctSuspect: 'Bella',
+        requiredClue: 'c_bella_lms'
+      },
+      {
+        id: 'q4',
+        q: '4. 誰因為「第一作者 (First Author) 署名爭議」對張教授懷恨在心，在幕後策劃了整起栽贓案？',
+        suspectOptions: ['Alex', 'Bella', 'Chris', '張教授'],
+        correctSuspect: 'Chris',
+        requiredClue: 'c_chris_motive'
+      },
+      {
+        id: 'q5',
+        q: '5. 關於【張教授 (Prof. Zhang)】是否知情及三人串謀的最終定案鐵證為何？',
+        suspectOptions: ['張教授對審核後的篡改毫不知情，係遭三人合謀栽贓陷害', '張教授授意學生修改數據'],
+        correctSuspect: '張教授對審核後的篡改毫不知情，係遭三人合謀栽贓陷害',
+        requiredClue: 'c_group_confession'
+      }
+    ];
+
+    const BoardApp = {
+      render() {
+        const container = document.getElementById('board-questions-container');
+        const collectedArr = Array.from(collectedClues).map(id => CLUES[id]).filter(Boolean);
+
+        container.innerHTML = DEDUCTION_QUESTIONS.map(item => `
+          <div class="p-4 rounded-xl bg-cyber-900 border border-slate-800 space-y-3">
+            <div class="font-bold text-slate-100 text-xs">${item.q}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="text-[11px] text-slate-400 block mb-1">選擇推論認定：</label>
+                <select id="ans-${item.id}" class="w-full bg-cyber-950 border border-slate-700 rounded-lg p-2 text-amber-300 font-bold">
+                  <option value="">-- 請選擇判定結論 --</option>
+                  ${item.suspectOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400 block mb-1">佐證之關鍵線索 (從已蒐集線索庫中選擇)：</label>
+                <select id="ev-${item.id}" class="w-full bg-cyber-950 border border-slate-700 rounded-lg p-2 text-cyan-300">
+                  <option value="">-- 請選擇已蒐集的對應證據 --</option>
+                  ${collectedArr.map(c => `<option value="${c.id}">[${TARGETS[c.target]?.shortName}] ${c.label} (${c.value})</option>`).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      },
+      submitReport() {
+        const fb = document.getElementById('board-feedback-box');
+        fb.classList.remove('hidden');
+
+        for (const item of DEDUCTION_QUESTIONS) {
+          const ans = document.getElementById(`ans-${item.id}`).value;
+          const ev = document.getElementById(`ev-${item.id}`).value;
+          if (!ans || !ev) {
+            SoundEngine.error();
+            fb.className = 'p-4 rounded-xl bg-rose-950/90 border border-rose-500 text-rose-200';
+            fb.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1.5"></i>請完成所有題目的「推論認定」與「佐證線索」選擇！（若下拉選單中缺少某項關鍵證據，代表你尚未在對應角色的電腦中點擊蒐集該線索）`;
+            return;
+          }
+          if (ans !== item.correctSuspect || ev !== item.requiredClue) {
+            SoundEngine.error();
+            fb.className = 'p-4 rounded-xl bg-rose-950/90 border border-rose-500 text-rose-200';
+            fb.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1.5"></i><strong>第 ${item.id.replace('q', '')} 題</strong> 的結論或佐證線索配對有誤，請重新核對證據鏈！`;
+            return;
+          }
+        }
+
+        SoundEngine.crackSuccess();
+        fb.className = 'p-5 rounded-xl bg-emerald-950/90 border-2 border-emerald-400 text-emerald-100 space-y-2 shadow-2xl';
+        fb.innerHTML = `
+          <div class="text-base font-black text-emerald-300 flex items-center gap-2">
+            <i class="fa-solid fa-trophy text-amber-400 text-xl"></i> 案件真相大白！PolyU 學術誠信調查完美結案！
+          </div>
+          <p class="leading-relaxed">
+            你透過嚴密的 OSINT 社工破譯與數位鑑識，成功串聯起完整證據鏈：<br>
+            • <strong>Daniel (無辜排除)：</strong>VS Code 底層運行日誌證實原始準確率為 71.8%，且嚴詞拒絕配合改數據。<br>
+            • <strong>Chris (幕後主謀)：</strong>因 8月1日 First Author 署名權爭議懷恨在心，趁張教授審核通過初稿後，策劃竄改終稿並匿名檢舉。<br>
+            • <strong>Alex & Bella (共犯)：</strong>Alex 為替好友出頭用 Python 將數據改為 89.4%；Bella 明知理學網誠信課第一條禁令仍受男友攛掇插入 AI 假文獻。<br>
+            • <strong>張教授 (洗清冤屈)：</strong>委員會正式撤銷對張教授的故意造假指控！
+          </p>
+        `;
+      }
+    };
+
+    /* --- 16. WINDOW & DESKTOP CHROME MANAGER --- */
+    const WindowManager = {
+      zIndex: 30,
+      bringToFront(win) {
+        this.zIndex++;
+        win.style.zIndex = this.zIndex;
+      },
+      startDrag(e, winId) {
+        if (e.target.closest('button')) return;
+        const win = document.getElementById(winId);
+        if (win.classList.contains('fullscreen')) return;
+        this.bringToFront(win);
+        const rect = win.getBoundingClientRect();
+        const ox = e.clientX - rect.left;
+        const oy = e.clientY - rect.top;
+        const onMove = (ev) => {
+          win.style.left = `${Math.max(0, Math.min(window.innerWidth - 120, ev.clientX - ox))}px`;
+          win.style.top = `${Math.max(52, Math.min(window.innerHeight - 80, ev.clientY - oy))}px`;
+        };
+        const onUp = () => {
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+      },
+      toggleFullscreen(winId) {
+        SoundEngine.click();
+        document.getElementById(winId).classList.toggle('fullscreen');
+      }
+    };
+
+    const AppManager = {
+      open(appId) {
+        SoundEngine.click();
+        const win = document.getElementById(`win-${appId}`);
+        if (!win) return;
+        win.classList.remove('hidden');
+        WindowManager.bringToFront(win);
+        this.renderApp(appId);
+        this.updateTaskbar();
+      },
+      close(appId) {
+        SoundEngine.click();
+        document.getElementById(`win-${appId}`)?.classList.add('hidden');
+        this.updateTaskbar();
+      },
+      renderApp(appId) {
+        if (appId === 'mail') MailApp.render();
+        if (appId === 'wechat') WeChatApp.render();
+        if (appId === 'files') FilesApp.render();
+        if (appId === 'douchi') DouchiApp.render();
+        if (appId === 'blackboard') BlackboardApp.render();
+        if (appId === 'dossier') DossierApp.render();
+        if (appId === 'cracker') CrackerApp.render();
+        if (appId === 'board') BoardApp.render();
+      },
+      updateTaskbar() {
+        const apps = [
+          { id: 'mail', label: '郵件', icon: 'fa-envelope' },
+          { id: 'wechat', label: '微信', icon: 'fa-brands fa-weixin' },
+          { id: 'files', label: '文件/代碼', icon: 'fa-folder-open' },
+          { id: 'douchi', label: '豆豉 AI', icon: 'fa-robot' },
+          { id: 'blackboard', label: '理學網', icon: 'fa-graduation-cap' },
+          { id: 'dossier', label: '線索庫', icon: 'fa-fingerprint' },
+          { id: 'cracker', label: '破譯機', icon: 'fa-unlock-keyhole' },
+          { id: 'board', label: '結案板', icon: 'fa-scale-balanced' }
+        ];
+        const bar = document.getElementById('taskbar-active-list');
+        bar.innerHTML = apps.map(a => {
+          const win = document.getElementById(`win-${a.id}`);
+          if (!win || win.classList.contains('hidden')) return '';
+          return `
+            <button onclick="AppManager.open('${a.id}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center gap-1.5 text-[11px]">
+              <i class="fa-solid ${a.icon}"></i>
+              <span>${a.label}</span>
+            </button>
+          `;
+        }).join('');
+      }
+    };
+
+    function refreshVisibleWindows() {
+      ['mail', 'wechat', 'files', 'douchi', 'blackboard', 'dossier', 'cracker', 'board'].forEach(id => {
+        const win = document.getElementById(`win-${id}`);
+        if (win && !win.classList.contains('hidden')) {
+          AppManager.renderApp(id);
+        }
+      });
+    }
+
+    function updateSystemChrome() {
+      const t = TARGETS[currentAccount];
+      document.getElementById('top-current-user').innerHTML = `<i class="fa-solid fa-desktop"></i> ${t.name}`;
+      document.getElementById('watermark-user').textContent = `HOST: ${t.host} (${t.email})`;
+      document.getElementById('top-clue-counter').textContent = `${collectedClues.size}/${Object.keys(CLUES).length}`;
+
+      // Adapt Files icon on desktop to match current user's main workspace tool
+      const fIcon = document.getElementById('desktop-files-icon');
+      const fLabel = document.getElementById('desktop-files-label');
+      const fBg = document.getElementById('desktop-files-bg');
+      if (currentAccount === 'daniel') {
+        fIcon.className = 'fa-solid fa-code text-xl text-white';
+        fLabel.textContent = 'VS Code';
+        fBg.className = 'w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition';
+      } else if (currentAccount === 'chris') {
+        fIcon.className = 'fa-solid fa-note-sticky text-xl text-white';
+        fLabel.textContent = '備忘錄與終稿';
+        fBg.className = 'w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition';
+      } else {
+        fIcon.className = 'fa-solid fa-file-shield text-xl text-white';
+        fLabel.textContent = '本機文件比對';
+        fBg.className = 'w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition';
+      }
+
+      StageManager.updateUI();
+    }
+
+    function showToast(msg, type = 'info') {
+      const layer = document.getElementById('toast-layer');
+      const card = document.createElement('div');
+      let border = 'border-cyan-400';
+      if (type === 'success') border = 'border-emerald-400';
+      if (type === 'unlock') border = 'border-amber-400';
+
+      card.className = `p-3.5 rounded-xl bg-cyber-900/95 border-l-4 ${border} shadow-2xl text-xs text-slate-100 pointer-events-auto transition duration-300`;
+      card.innerHTML = `<div class="font-bold leading-relaxed">${msg}</div>`;
+      layer.appendChild(card);
+      setTimeout(() => {
+        card.classList.add('opacity-0', 'translate-x-4');
+        setTimeout(() => card.remove(), 300);
+      }, 3800);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      updateSystemChrome();
+      // Start with Prof. Zhang's Mail open
+      AppManager.open('mail');
+    });
+  </script>
+</body>
+</html>
